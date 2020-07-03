@@ -4,9 +4,53 @@
 *   
 *
 */
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
+#include	<sys/types.h>	/* basic system data types */
+#include	<sys/socket.h>	/* basic socket definitions */
+#include	<sys/time.h>	/* timeval{} for select() */
+#include	<time.h>		/* timespec{} for pselect() */
+#include	<netinet/in.h>	/* sockaddr_in{} and other Internet defns */
+#include	<arpa/inet.h>	/* inet(3) functions */
+#include	<errno.h>
+#include	<fcntl.h>		/* for nonblocking */
+#include	<netdb.h>
+#include	<signal.h>
+#include	<stdio.h>
+#include	<stdlib.h>
+#include	<string.h>
+#include	<sys/stat.h>	/* for S_xxx file mode constants */
+#include	<sys/uio.h>		/* for iovec{} and readv/writev */
+#include	<unistd.h>
+#include	<sys/wait.h>
+#include	<sys/un.h>		/* for Unix domain sockets */
+
+
+
+/* Miscellaneous constants */
+#define	MAXLINE		4096	/* max text line length */
+#define	MAXSOCKADDR  128	/* max socket address structure size */
+#define	BUFFSIZE	8192	/* buffer size for reads and writes */
+
+
+typedef void(*func_handler)(int);
+
+ void setup_ctrl_c_handler(func_handler my_handler)
+ {
+    struct sigaction sigIntHandler;
+
+   // set ctrl_c handler
+   sigIntHandler.sa_handler = my_handler;
+   /* Clear all signals from SET.  */
+   sigemptyset(&sigIntHandler.sa_mask);
+
+   sigIntHandler.sa_flags = 0;
+
+   /* Get and/or set the action for signal SIG.  */
+   sigaction(SIGINT, &sigIntHandler, NULL);
+
+ }
+
+
+
 
 void err_sys(const char* x) 
 { 
@@ -157,7 +201,7 @@ int Accept( int sockfd, struct sockaddr* client_address, socklen_t* addrlen)
      int socket_fd = accept(sockfd, client_address,addrlen );
 
      if ( socket_fd < 0)
-          err_sys("Accept funciton error");
+          err_sys("Accept function error");
      
      return socket_fd;
 }
