@@ -5,16 +5,18 @@ CC:=gcc
 CXX=g++
 CXXFLAGS:= -g -std=c++11 -Wall
 LDFLAGS:= -l
-SRC_DIR:= ./src
+SRC_DIR:= src
 INCLUDE:=-I./src/include
 OBJ_DIR:=./temp
 
+SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
+OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SOURCES))
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c* $(OBJ_DIR)
+$(EXEC_NAME): $(OBJECTS) | $(EXEC_DIR)
+	$(CXX) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $^ -o $@
-
-$(EXEC_NAME): $(OBJ_DIR)/*.o $(EXEC_DIR)
-	$(LINKER) $< -o $(EXEC_DIR)/$@
 
 $(OBJ_DIR):
 	mkdir -p $@
@@ -28,7 +30,7 @@ run: $(EXEC_NAME)
 	 $(EXEC_DIR)/$^
 
 clean:
-	rm -rf $(EXEC_DIR)$(EXEC_NAME) $(OBJ_DIR)*.o
+	rm -rf $(EXEC_DIR)$(EXEC_NAME) $(OBJ_DIR)/*.o
 
 clean_dirs:
 	rm -rf $(EXEC_DIR) $(OBJ_DIR)
