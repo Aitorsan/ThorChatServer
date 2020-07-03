@@ -30,7 +30,7 @@ run: $(EXEC_NAME)
 	 $(EXEC_DIR)/$^
 
 clean:
-	rm -rf $(EXEC_DIR)$(EXEC_NAME) $(OBJ_DIR)/*.o
+	rm -rf $(EXEC_DIR)/$(EXEC_NAME) $(OBJ_DIR)/*.o
 
 clean_dirs:
 	rm -rf $(EXEC_DIR) $(OBJ_DIR)
