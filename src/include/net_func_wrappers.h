@@ -18,11 +18,10 @@
 #include	<stdlib.h>
 #include	<string.h>
 #include	<sys/stat.h>	/* for S_xxx file mode constants */
-#include	<sys/uio.h>		/* for iovec{} and readv/writev */
+#include	<sys/uio.h>	/* for iovec{} and readv/writev */
 #include	<unistd.h>
 #include	<sys/wait.h>
-#include	<sys/un.h>		/* for Unix domain sockets */
-
+#include	<sys/un.h>	/* for Unix domain sockets */
 
 
 /* Miscellaneous constants */
@@ -48,8 +47,6 @@ typedef void(*func_handler)(int);
    sigaction(SIGINT, &sigIntHandler, NULL);
 
  }
-
-
 
 
 void err_sys(const char* x) 
@@ -204,4 +201,28 @@ int Accept( int sockfd, struct sockaddr* client_address, socklen_t* addrlen)
           err_sys("Accept function error");
      
      return socket_fd;
+}
+
+/* Close the socket */
+void Close(int socket_fd)
+{
+     int err_code = close(socket_fd);
+     
+     if ( err_code < 0)
+          err_sys("Close socket error");
+}
+
+/* Wrapper to return only the address family IPv4 or IPv6*/
+int get_socketfd_family(int socket_file_descriptor)
+{
+     // this is the address structure with the larger size since we do not know in advance
+     // which kind of sockaddr structure we are dealing with, we use sockaddr_storage
+     struct sockaddr_storage ss;
+     socklen_t len = sizeof(ss);
+     
+     //get the socket address family and return the address family if the file descriptor is open if not -1
+     if( getsockname(socket_file_descriptor,(struct sockaddr*)&ss, &len)< 0 )
+          return -1;
+
+     return ss.ss_family;
 }

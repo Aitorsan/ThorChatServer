@@ -1,12 +1,16 @@
 #include "net_func_wrappers.h"
 #include <iostream>
 #include <time.h>
+
 bool closeSocket{false};
+
 int listen_fd;
+
 void close_socket(int sock)
 {
      close(listen_fd);
 }
+
 int main()
 {
     //create listening socket file descriptor
@@ -50,10 +54,9 @@ int main()
        write(client_fd,buffer, strlen(buffer));
 
        //Close the connection
-       close(client_fd);
+       Close(client_fd);
    }
 
    
-	
 return 0;
 }

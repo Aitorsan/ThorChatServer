@@ -42,7 +42,7 @@ temp/
 
 # Icon must end with two \r
 Icon
-.vscode/settings.json
+.vscode/settings.*
 # Thumbnails
 ._*
 
