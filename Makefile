@@ -3,9 +3,9 @@ EXEC_DIR:=./bin
 LINKER:=g++
 CC:=gcc
 CXX=g++
-CXXFLAGS:= -g -std=c++11 -Wall
-LDFLAGS:= -l
-SRC_DIR:= src
+CXXFLAGS:=-g -std=c++11 -Wall
+LDFLAGS:=-pthread
+SRC_DIR:=src
 INCLUDE:=-I./src/include
 OBJ_DIR:=./temp
 
@@ -15,7 +15,7 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SOURCES))
 .PHONY: clean run clean_dirs $(EXEC_DIR) $(OBJ_DIR)
 
 $(EXEC_NAME): $(OBJECTS) | $(EXEC_DIR)
-	$(CXX) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
+	$(CXX) $(LDFLAGS) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $^ -o $@
@@ -34,10 +34,6 @@ dbg:
 
 clean:
 	rm -rf $(EXEC_DIR)/$(EXEC_NAME) $(OBJ_DIR)/*.o
-
-clean_dirs:
-	rm -rf $(EXEC_DIR) $(OBJ_DIR)
-
 
 ######################################################
 # Build the default client
@@ -62,7 +58,10 @@ $(CLIENT_OBJS_DIR):
 	mkdir -p $@
 
 clean_client:
-	rm -rf $(EXEC_DIR)/$(CLIENT_NAME) $(CLIENT_OBJ_DIR)
+	rm -rf $(EXEC_DIR)/$(CLIENT_NAME) $(CLIENT_OBJS_DIR)
 
 run_client: $(CLIENT_NAME)
 	$(EXEC_DIR)/$^
+
+clean_dirs:
+	rm -rf $(EXEC_DIR) $(OBJ_DIR) $(CLIENT_OBJS_DIR)
