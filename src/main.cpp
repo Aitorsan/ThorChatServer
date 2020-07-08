@@ -10,10 +10,6 @@
 
 
 std::mutex mutex;
-//client threads
-std::vector<std::thread> clientThreadsList;
-std::vector<int> clientsList;
-   
 
 void printSafe(const std::string& message,int fd = -1)
 {
@@ -34,7 +30,7 @@ void findAndRemoveClient(std::vector<T>& clientsList, int clientFileDescriptor)
    if( clientToRemove != listEndIt)
    {
       clientsList.erase(clientToRemove);
-      printSafe("client Removed from list:", clientFileDescriptor);
+      std::cout << "client Removed from list:"<<  clientFileDescriptor<<std::endl;;
    }
    
 }
@@ -68,7 +64,6 @@ void sendMsg(int senderFd, const std::string& message, std::vector<int>& clients
 
 void serviceClient(int fd,std::vector<int>& clientsList)
 {
-
    //Send greetings message back to the client 
    char greetings[MAXLINE];
    memset(greetings,0,sizeof(greetings));
@@ -81,38 +76,42 @@ void serviceClient(int fd,std::vector<int>& clientsList)
      
    while(connected)
    {
-      memset(buffer,0,sizeof(buffer));
       //read if there is data from the client
       int bytesReceived = recv(fd, buffer, sizeof(buffer), 0);
 
       printSafe("Client :",fd);
       printSafe("bytes received: ", bytesReceived);   
+      printSafe("----------------------");
       std::string message{buffer};
          
       if( bytesReceived < 0 )
       {
-         std::lock_guard<std::mutex> lockthis(mutex);
-         if ( errno != EINTR )// chek if the read system call was interrupted
-            //we have an error
-            err_sys("fatal error reciving data");
+         {
+            std::lock_guard<std::mutex> lockthis(mutex);
+            if ( errno != EINTR )// chek if the read system call was interrupted
+               //we have an error
+               err_sys("fatal error reciving data");
+
+         }
       }
       else if ( bytesReceived == 0 || message == "exit" )
       {
-         connected = false;
+         break;
       }
       else
       {
          //send the message
          sendMsg(fd,message,clientsList);
+         memset(buffer,0,sizeof(buffer));
       }
    }
      
-   
+     thor::Close(fd);
      //Remove the client from the list if it was not previously removed
      findAndRemoveClient(clientsList, fd);
-       printSafe("closing client:",fd);
+     printSafe("closing client:",fd);
+     sleep(1);
      //close socket
-     thor::Close(fd);
 }
 
 int CreateServerSocket()
@@ -141,6 +140,7 @@ int CreateServerSocket()
 
 int main()
 {
+   std::vector<int> clientsList;
 
    // ctr+c signal
    setSignalHandler(SIGINT, [](int signo)
@@ -156,7 +156,6 @@ int main()
 
    //buffer for the message
    char buffer[MAXLINE];
-
  
    while(true)
    {

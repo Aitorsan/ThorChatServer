@@ -3,6 +3,12 @@
 
 int main(int argc , char **argv)
 {
+	 // ctr+c signal
+   setSignalHandler(SIGINT, [](int signo)
+   {
+      //just exit this will close all the sockets open
+      exit(0);
+   });
 	if ( argc != 2)
 		err_quit("Introduce ip address!\n");
 
