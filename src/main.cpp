@@ -1,4 +1,5 @@
 #include "net_func_wrappers.h"
+#include "ClientInfo.h"
 #include <time.h>
 #include <map>
 #include <vector>
@@ -20,17 +21,17 @@ void printSafe(const std::string& message,int fd = -1)
       std::cout << message << std::endl;
 }
 template <typename T>
-void findAndRemoveClient(std::vector<T>& clientsList, int clientFileDescriptor)
+void findAndRemoveClient(std::vector<T>& clientsList, const ClientInfo& clientToClose)
 {
    std::lock_guard<std::mutex> guardClientList(mutex);
    auto listBegIt = clientsList.begin();
    auto listEndIt = clientsList.end();
-   auto clientToRemove = std::find(listBegIt,listEndIt,clientFileDescriptor);
+   auto clientToRemove = std::find(listBegIt,listEndIt,clientToClose);
 
    if( clientToRemove != listEndIt)
    {
       clientsList.erase(clientToRemove);
-      std::cout << "client Removed from list:"<<  clientFileDescriptor<<std::endl;;
+      std::cout << "client Removed from list:"<<  clientToClose.name<<std::endl;;
    }
    
 }
@@ -43,46 +44,57 @@ void removeClientByIndex(std::vector<T>& clientsList, int index)
    clientsList.erase(itPosition);
 }
 
-void sendMsg(int senderFd, const std::string& message, std::vector<int>& clientsList)
+void sendMsg(int senderFd, const std::string& message, std::vector<ClientInfo>& clientsList)
 {
    // lock the vector
    std::lock_guard<std::mutex> guard_list(mutex);
    //send the data from the client to others
    for ( int i = 0; i < clientsList.size();++i)
    {
-      int& currClient = clientsList[i];
-      bool clientIsConnected =  fcntl(currClient, F_GETFD) != -1 || errno != EBADF;
+      ClientInfo& currClient = clientsList[i];
+      auto receiverFd = currClient.socketFd;
+      bool clientIsConnected =  fcntl(receiverFd, F_GETFD) != -1 || errno != EBADF;
    
-      if( currClient != senderFd)
+      if( receiverFd != senderFd)
       {
          if ( clientIsConnected )
             //Sendata
-            send(currClient,message.c_str(),message.size(),0);
+            send(receiverFd,message.c_str(),message.size(),0);
       }
    }
 }
 
-void serviceClient(int fd,std::vector<int>& clientsList)
+void sendMsgTo(int clientSocketFd,const std::string& message)
 {
-   //Send greetings message back to the client 
-   char greetings[MAXLINE];
-   memset(greetings,0,sizeof(greetings));
-   snprintf(greetings, sizeof(greetings), "Welcome to the chat server introduce your name\r\n");
-   send(fd,greetings, strlen(greetings),0);
-     
+    //Sendata
+   send(clientSocketFd,message.c_str(),message.size(),0);
+}
+
+void serviceClient(std::vector<ClientInfo>& clientsList)
+{
+   ClientInfo thisClient;
+   {
+      std::lock_guard<std::mutex> lockthis(mutex);
+      thisClient = *(--clientsList.end());
+   }
+  
    //handle client
    bool connected{true};
+   bool clientNameIntroduced{false};
    char buffer[MAXLINE];
-     
+   memset(buffer,0,sizeof(buffer));
+
+
    while(connected)
    {
       //read if there is data from the client
-      int bytesReceived = recv(fd, buffer, sizeof(buffer), 0);
+      int bytesReceived = recv(thisClient.socketFd, buffer, sizeof(buffer), 0);
 
-      printSafe("Client :",fd);
+      printSafe("----------------------");
+      printSafe("Client :",thisClient.socketFd);
       printSafe("bytes received: ", bytesReceived);   
       printSafe("----------------------");
-      std::string message{buffer};
+      std::string message{"["+thisClient.name + "]:"+buffer+'\n'};
          
       if( bytesReceived < 0 )
       {
@@ -91,27 +103,26 @@ void serviceClient(int fd,std::vector<int>& clientsList)
             if ( errno != EINTR )// chek if the read system call was interrupted
                //we have an error
                err_sys("fatal error reciving data");
-
          }
       }
       else if ( bytesReceived == 0 || message == "exit" )
       {
-         break;
+         connected = false;
       }
       else
       {
          //send the message
-         sendMsg(fd,message,clientsList);
+         sendMsg(thisClient.socketFd,message,clientsList);
          memset(buffer,0,sizeof(buffer));
       }
    }
      
-     thor::Close(fd);
      //Remove the client from the list if it was not previously removed
-     findAndRemoveClient(clientsList, fd);
-     printSafe("closing client:",fd);
-     sleep(1);
+     findAndRemoveClient(clientsList, thisClient);
+     printSafe("closing client:",thisClient.socketFd);
      //close socket
+     thor::Close(thisClient.socketFd);
+     sleep(1);
 }
 
 int CreateServerSocket()
@@ -140,7 +151,7 @@ int CreateServerSocket()
 
 int main()
 {
-   std::vector<int> clientsList;
+   std::vector<ClientInfo> clientsList;
 
    // ctr+c signal
    setSignalHandler(SIGINT, [](int signo)
@@ -153,29 +164,53 @@ int main()
 
    // client file descriptor
    sockaddr_in client_address;
-
-   //buffer for the message
-   char buffer[MAXLINE];
  
+   //buffer for the address
+   char buffer[20];
    while(true)
    {
+      memset(buffer,0,sizeof(buffer));
       socklen_t len = sizeof(client_address);
       printSafe("Listening for clients...");
       //Accept client
       int client_fd = Accept(listen_fd,(sockaddr*)&client_address,&len);
+
+      int numBytes = recv(client_fd, buffer,sizeof(buffer),0);
+      std::string clientName {buffer};
+      if( numBytes < 0 )
+      {
+         if ( errno != EINTR )// chek if the read system call was interrupted
+            //we have an error
+            err_sys("fatal error reciving data");
+      }
+      else
+      {
+       //Send greetings message back to the client 
+       sendMsgTo(client_fd, "Welcome to the chat server [ "+clientName+"]\r\n");
+      }
+      sleep(0.5);
+     
+      //TODO: find a way to serialize the client information
+      ClientInfo newClient;
+      newClient.name = clientName;
+      newClient.socketFd = client_fd;
+      newClient.port = ntohs(client_address.sin_port);
+      newClient.address = inet_ntop(AF_INET,&client_address.sin_addr, buffer,sizeof(buffer));
+
       std::stringstream oss;
-      oss << "conecction from: "<< inet_ntop(AF_INET, &client_address.sin_addr,buffer, sizeof(buffer))<< ", port: "<< ntohs(client_address.sin_port)<<std::endl;
+      oss << "conecction from: "<< newClient.address<< ", port: "<< newClient.port<<std::endl;
       printSafe(oss.str());
-      mutex.lock();
       // add the new client to the list for other clients 
-      clientsList.push_back(client_fd);
+      mutex.lock();
+      clientsList.push_back(newClient);
       int numClients = clientsList.size();
       mutex.unlock();
+      
       printSafe("num clients: ",numClients);
       //start the service thread
-      std::thread serviceThread(serviceClient,client_fd,std::ref(clientsList));
+      std::thread serviceThread(serviceClient,std::ref(clientsList));
       serviceThread.detach();
    }
- 
+ shutdown(listen_fd,SHUT_RDWR);
 return 0;
 }
