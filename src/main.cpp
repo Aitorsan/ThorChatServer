@@ -80,10 +80,8 @@ void serviceClient(std::vector<ClientInfo>& clientsList)
   
    //handle client
    bool connected{true};
-   bool clientNameIntroduced{false};
    char buffer[MAXLINE];
    memset(buffer,0,sizeof(buffer));
-
 
    while(connected)
    {
@@ -94,7 +92,7 @@ void serviceClient(std::vector<ClientInfo>& clientsList)
       printSafe("Client :",thisClient.socketFd);
       printSafe("bytes received: ", bytesReceived);   
       printSafe("----------------------");
-      std::string message{"["+thisClient.name + "]:"+buffer+'\n'};
+      std::string message{"\n["+thisClient.name + "]:"+buffer+'\n'};
          
       if( bytesReceived < 0 )
       {
@@ -159,6 +157,12 @@ int main()
       //just exit this will close all the sockets open
       exit(0);
    });
+   // ctr+c signal
+   setSignalHandler(SIGTERM, [](int signo)
+   {
+      //just exit this will close all the sockets open
+      exit(0);
+   });
    //server file descriptor or socket
    int listen_fd = CreateServerSocket();
 
@@ -186,7 +190,7 @@ int main()
       else
       {
        //Send greetings message back to the client 
-       sendMsgTo(client_fd, "Welcome to the chat server [ "+clientName+"]\r\n");
+       sendMsgTo(client_fd, "Welcome to the chat server ["+clientName+"]\r\r\n\n");
       }
       sleep(0.5);
      

@@ -49,7 +49,7 @@ CLIENT_OBJS:=$(patsubst $(CLIENT_SRC_DIR)/%.cpp,$(CLIENT_OBJS_DIR)/%.o,$(CLIENT_
 .PHONY: run_client clean_client $(CLIENT_OBJS_DIR)
 
 $(CLIENT_NAME): $(CLIENT_OBJS) | $(EXEC_DIR)
-	$(CXX) $^ -o $(EXEC_DIR)/$@
+	$(CXX) $(LDFLAGS) $^ -o $(EXEC_DIR)/$@
 
 $(CLIENT_OBJS_DIR)/%.o: $(CLIENT_SRC_DIR)/%.cpp | $(CLIENT_OBJS_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $^ -o $@
