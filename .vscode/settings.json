@@ -50,6 +50,9 @@
         "typeinfo": "cpp",
         "bitset": "cpp",
         "cstring": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "list": "cpp",
+        "numeric": "cpp",
+        "iomanip": "cpp"
     }
 }

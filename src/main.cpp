@@ -1,5 +1,7 @@
 #include "net_func_wrappers.h"
 #include "ClientInfo.h"
+#include "json11.hpp"
+#include "base64.h"
 #include <time.h>
 #include <map>
 #include <vector>
@@ -8,6 +10,7 @@
 #include <functional>
 #include <mutex>
 #include <sstream>
+#include <fstream>
 
 
 std::mutex mutex;
@@ -20,8 +23,9 @@ void printSafe(const std::string& message,int fd = -1)
    else
       std::cout << message << std::endl;
 }
-template <typename T>
-void findAndRemoveClient(std::vector<T>& clientsList, const ClientInfo& clientToClose)
+
+
+void findAndRemoveClient(std::vector<ClientInfo>& clientsList, const ClientInfo& clientToClose)
 {
    std::lock_guard<std::mutex> guardClientList(mutex);
    auto listBegIt = clientsList.begin();
@@ -67,7 +71,8 @@ void sendMsg(int senderFd, const std::string& message, std::vector<ClientInfo>& 
 void sendMsgTo(int clientSocketFd,const std::string& message)
 {
     //Sendata
-   send(clientSocketFd,message.c_str(),message.size(),0);
+   int bytes = send(clientSocketFd,message.c_str(),message.size(),0);
+   printSafe( "bytes sent",bytes);
 }
 
 void serviceClient(std::vector<ClientInfo>& clientsList)
@@ -82,7 +87,7 @@ void serviceClient(std::vector<ClientInfo>& clientsList)
    bool connected{true};
    char buffer[MAXLINE];
    memset(buffer,0,sizeof(buffer));
-
+printSafe("start transaction:",thisClient.socketFd);
    while(connected)
    {
       //read if there is data from the client
@@ -123,6 +128,62 @@ void serviceClient(std::vector<ClientInfo>& clientsList)
      sleep(1);
 }
 
+
+
+std::string ReadImage()
+{
+   std::stringstream os;
+   os << std::ifstream("/home/aitor/Desktop/Projects/c++/ChatServer/images/im.jpg", std::ios::binary).rdbuf();
+   return os.str();
+    
+}
+
+void SaveFile(std::string imageData)
+{
+   std::istringstream buffer(imageData);
+   std::ofstream("stuff.json") << buffer.rdbuf();
+
+}
+
+
+std::string createImagePacket(const std::string& fileName,const std::string& imageTypeExtension, std::string& data)
+{
+   std::vector<std::pair<std::string,std::string> >jsonData = {
+    { "\"type\"", "\"image\",\n" },
+    { "\"filename\"", std::string("\"")+fileName+std::string("\",\n") },
+     {"\"extension\"",std::string("\"")+imageTypeExtension+std::string("\",\n")}, /* .jpg , .png*/
+    { "\"data\"", std::string("\"")+base64(data) +std::string("\"")},
+   };
+
+   std::string json_str{"{\n"};
+   for ( auto all : jsonData)
+   {
+      json_str += all.first;
+      json_str+= ":";
+      json_str+= all.second;
+  
+   }
+   
+   json_str += "\n}\n";
+   return json_str;
+}
+
+
+std::string createImagePacketwithJson11(const std::string& fileName,const std::string& imageTypeExtension,std::string& data)
+{
+  std::string database64 = base64(data);
+   SaveFile(database64);
+   json11::Json my_json = json11::Json::object {
+    { "type", "image" },
+    {"filename",fileName},
+    { "extension", imageTypeExtension },
+    { "data", database64 }
+};
+   std::string json_str = my_json.dump();
+   
+   return json_str;
+  
+}
 int CreateServerSocket()
 {
 
@@ -149,8 +210,12 @@ int CreateServerSocket()
 
 int main()
 {
-   std::vector<ClientInfo> clientsList;
 
+   std::string image = ReadImage();
+   std::string jsonPacket = createImagePacket("somefile","jpg",image);
+   std::vector<ClientInfo> clientsList;
+   SaveFile(jsonPacket);
+    std::cout << jsonPacket << std::endl;
    // ctr+c signal
    setSignalHandler(SIGINT, [](int signo)
    {
@@ -179,8 +244,8 @@ int main()
       //Accept client
       int client_fd = Accept(listen_fd,(sockaddr*)&client_address,&len);
 
-      int numBytes = recv(client_fd, buffer,sizeof(buffer),0);
-      std::string clientName {buffer};
+      std::string clientName {"whatever"};
+      /*int numBytes = recv(client_fd, buffer,sizeof(buffer),0);
       if( numBytes < 0 )
       {
          if ( errno != EINTR )// chek if the read system call was interrupted
@@ -190,8 +255,9 @@ int main()
       else
       {
        //Send greetings message back to the client 
-       sendMsgTo(client_fd, "Welcome to the chat server ["+clientName+"]\r\r\n\n");
-      }
+       */
+      sendMsgTo(client_fd, jsonPacket);
+      //}
       sleep(0.5);
      
       //TODO: find a way to serialize the client information
