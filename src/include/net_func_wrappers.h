@@ -32,13 +32,13 @@ namespace thor
      #define BUFFSIZE	 8192 /* buffer size for reads and writes */
      #define SERVER_PORT 55555
 
-     constexpr int std_input = 0;
-     constexpr int std_output = 1;
-     constexpr int std_error = 2;
+     static constexpr int std_input = 0;
+     static constexpr int std_output = 1;
+     static constexpr int std_error = 2;
      typedef void sig_handler (int);
 
 
-     sig_handler* setSignalHandler(int signo, sig_handler* handler)
+     inline sig_handler* setSignalHandler(int signo, sig_handler* handler)
      {
           struct sigaction action, oldAction;
           
@@ -74,7 +74,7 @@ namespace thor
      handle properly this signal because it could be more than one child licked
      because a signal could be generated before the signal handler is executed*/
 
-     void sig_child(int signo)
+     inline void sig_child(int signo)
      {
           pid_t pid; int status;
           // buffer for debuging
@@ -89,7 +89,7 @@ namespace thor
           }
      } 
 
-     void err_quit(const char *fmt, ...)
+     inline void err_quit(const char *fmt, ...)
      {
           va_list args;
 
@@ -100,7 +100,7 @@ namespace thor
           exit(EXIT_FAILURE);
      }
 
-     void err_sys(const char* x) 
+     inline void err_sys(const char* x) 
      { 
           perror(x); 
           exit(1); 
@@ -152,7 +152,7 @@ namespace thor
           SOCK_RAW       |  IPv4        | IPv6        |                    | Yes      | Yes
           --------------------------------------------------------------------------------------
      **/
-     int Socket( int family, int type, int protocol)
+     inline int Socket( int family, int type, int protocol)
      {
           int socket_fd = socket(family, type, protocol);
           
@@ -163,7 +163,7 @@ namespace thor
      }
 
      /* The connect function is used by a TCP client to stablish a connection with a TCP server*/
-     void Connect( int socket_file_descriptor, const struct sockaddr* server_address, socklen_t address_length)
+     inline void Connect( int socket_file_descriptor, const struct sockaddr* server_address, socklen_t address_length)
      {
           int error_code = connect(socket_file_descriptor,server_address, address_length );
 
@@ -193,7 +193,7 @@ namespace thor
 
      Note: The wildcard address is specified by the constant INADDR_ANY
      */
-     void Bind(int sockfd, const struct sockaddr* myaddr, socklen_t addrlen)
+     inline void Bind(int sockfd, const struct sockaddr* myaddr, socklen_t addrlen)
      {
           int error_code =  bind(sockfd, myaddr, addrlen);
 
@@ -227,7 +227,7 @@ namespace thor
           as different implementations interpret this differently.If you don't want clients connecting
           close the socket.( see page 107- Unix network programming - volume 1 W.Richard Stevens)
      */
-     void Listen(int sockfd, int backlog)
+     inline void Listen(int sockfd, int backlog)
      {
           const char* ptr = getenv("LISTENQ");
 
@@ -243,7 +243,7 @@ namespace thor
      /* The accept is called by a TCP server to return the next completed connection from the fron
      of the completed connection queue. If the completed connection queue is empty, the process
      is put to sleep ( assuming the default of a blocking socket).(page 109- Unix network programing)*/
-     int Accept( int sockfd, struct sockaddr* client_address, socklen_t* addrlen)
+     inline int Accept( int sockfd, struct sockaddr* client_address, socklen_t* addrlen)
      {
           int socket_fd = accept(sockfd, client_address,addrlen );
 
@@ -257,7 +257,7 @@ namespace thor
      }
 
      /* Close the socket */
-     void Close(int socket_fd)
+     inline void Close(int socket_fd)
      {
           int err_code = close(socket_fd);
           
@@ -266,7 +266,7 @@ namespace thor
      }
 
      /* Wrapper to return only the address family IPv4 or IPv6*/
-     int get_socketfd_family(int socket_file_descriptor)
+     inline int get_socketfd_family(int socket_file_descriptor)
      {
           // this is the address structure with the larger size since we do not know in advance
           // which kind of sockaddr structure we are dealing with, we use sockaddr_storage
@@ -282,7 +282,7 @@ namespace thor
 
 
      /*Read n bytes from a descriptor*/
-     ssize_t ReadNumBytes( int fd, void* voidPtrBuffer,size_t numberOfBytesToRead)
+     inline ssize_t ReadNumBytes( int fd, void* voidPtrBuffer,size_t numberOfBytesToRead)
      {
           size_t bytesLeftToRead = numberOfBytesToRead;
           ssize_t numberOfBytesReaded = {};
@@ -310,4 +310,3 @@ namespace thor
 
 }// end thor_serv namespace
 
-using namespace thor;
