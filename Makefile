@@ -6,9 +6,8 @@ CXX=g++
 CXXFLAGS:=-g -std=c++11 -Wall
 LDFLAGS:=-pthread
 SRC_DIR:=src
-INCLUDE:=-I./src/include -I./3dparty/json11/include
+INCLUDE:=-I./src/include -I./3dparty
 OBJ_DIR:=./temp
-3DOBJECTS:= $(OBJ_DIR)/json11.o
 
 SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SOURCES))
@@ -16,7 +15,7 @@ OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SOURCES))
 .PHONY: clean run clean_dirs 
   
 $(EXEC_NAME): $(OBJECTS) | $(EXEC_DIR)
-	$(CXX) $(LDFLAGS) $(3DOBJECTS) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
+	$(CXX) $(LDFLAGS) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $^ -o $@

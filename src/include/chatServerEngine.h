@@ -3,14 +3,16 @@
 
 #include "ClientInfo.h"
 #include <vector>
+#include <atomic>
+#include <thread>
 #include <mutex>
-
-struct sockaddr_in;
-
+#include <memory>
+#include <utility>
+#include <netinet/in.h>
 class ChatServerEngine
 {
  public:
-    ChatServerEngine() = default;
+    ChatServerEngine();
     ~ChatServerEngine();
 
     void initializeServer( int portNumber,const char* ipAddress = nullptr);
@@ -19,20 +21,24 @@ class ChatServerEngine
 private:
     void installSignalHandlers();
     int createServerSocket( int portNumber,const char* serverAddress);
-    void addNewClient( const sockaddr_in& client_address, int clientSocketFileDescriptor);
-    void startNewServiceThread();
+    void addNewClient( const ClientInfo& newClient);
     void findAndRemoveClient(const ClientInfo& clientToClose);
-    void sendMsgToClients(int senderFd, const std::string& message);
     void sendMsgTo(int clientSocketFd,const std::string& message);
+    void addMessageToQueue(int clientSocket,const std::string& message);
+    std::string readSocket(int socket);
 
-    //threaded service
-    void serviceClient();
+    //threaded services
+    void readServiceThreadFunc(ClientInfo thisClient);
+    void sendServiceThreadFunc();
+    void loginServiceThreadFunc(int socketClientFd, sockaddr_in clientAddr);
 
 private:
-   sockaddr_in* m_clientAddress;
    std::vector<ClientInfo> m_clientsList;
    int m_listenSocket; 
-   std::mutex m_mutex;
+   std::mutex m_clientsMutex;
+   std::mutex m_messageMutex;
+   std::unique_ptr<std::thread> m_ptrSenderThread;
+   std::vector <std::pair<int,std::string>> messageQueue; 
 };
 
 #endif //CHAT_SERVER_H

@@ -22,8 +22,11 @@ public:
     ~LoginWindow();
 public slots:
     void onUserVerified();
+    void initLoggin();
+
 signals:
     void verifyUser();
+    void connectToServer(const QString& ,const QString&);
 private:
     Ui::LoginWindow* ui;
     QStandardItemModel *m_chatModel;

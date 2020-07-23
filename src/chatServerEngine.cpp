@@ -1,5 +1,8 @@
 #include "chatServerEngine.h"
+#include "message.h"
+#include "JsonFormatter.h"
 #include "net_func_wrappers.h"
+#include "DataBaseAcces.h"
 #include <sstream>
 #include <string>
 #include <thread>
@@ -9,7 +12,8 @@ using namespace thor;
 
 namespace
 {
-
+   std::atomic<bool>serverClosed{false};
+   
    void printSafe(const std::string& message,int fd = -1)
    {
       std::mutex mutex;
@@ -21,20 +25,32 @@ namespace
    }
 }
 
+ChatServerEngine::ChatServerEngine()
+   : m_clientsList{}
+   , m_listenSocket{}
+   , m_clientsMutex{}
+   ,m_messageMutex{}
+   ,m_ptrSenderThread{nullptr}
+{
+}
+
 ChatServerEngine::~ChatServerEngine()
 {
-    shutdown(m_listenSocket,SHUT_RDWR);
+   if( m_ptrSenderThread->joinable())
+      m_ptrSenderThread->join();
+   shutdown(m_listenSocket,SHUT_RDWR);
 }
 
 void ChatServerEngine::initializeServer( int portNumber,const char* ipAddress )
 {
-    installSignalHandlers();
-    m_listenSocket = createServerSocket(portNumber,ipAddress);
+   installSignalHandlers();
+   m_listenSocket = createServerSocket(portNumber,ipAddress);
+   m_ptrSenderThread.reset( new std::thread{&ChatServerEngine::sendServiceThreadFunc,this});
 }
 
 bool ChatServerEngine::run()
 {
-   // client file descriptor
+   // client information
    sockaddr_in client_address;
 
    //buffer for the address
@@ -48,16 +64,181 @@ bool ChatServerEngine::run()
       
       //Accept client
       int client_fd = Accept(m_listenSocket,(sockaddr*)&client_address,&len);
-      
-    
+      printSafe("Client connected...");
+      std::thread loginServiceThread(&ChatServerEngine::loginServiceThreadFunc,this,client_fd,client_address);
+      loginServiceThread.detach();
    }
 
 }
 
-void ChatServerEngine::startNewServiceThread()
-{ 
-    std::thread serviceThread(&ChatServerEngine::serviceClient,this);
-    serviceThread.detach();
+void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in clientAddr)
+{
+   bool loginSucceed{false};
+   char buffer[40];
+   ClientInfo newClient;
+   JsonFormatter formatter;
+   DataBaseAccess dataBaseAccess("users.db");
+   dataBaseAccess.logInDB();
+
+   while( !serverClosed && !loginSucceed)
+   {
+      std::string initMessage = readSocket(socketClientFd);
+
+      if( initMessage.empty()) break;
+
+      formatter.parseLoginInfo(newClient,initMessage);
+      
+
+      /// check database for user name and password
+      std::cout << "name:"<<newClient.name << std::endl;
+      std::cout << "password"<< newClient.password << std::endl;
+      //retrive the image data and grant access
+      auto result = dataBaseAccess.querryString(newClient.name.c_str());  
+      
+      loginSucceed = !result.empty();
+      std::string response;
+      if( !loginSucceed)
+      {
+         // check if it is a sign up message
+         // formatter.parseSignInInfo()
+
+         //Send a message repeat the information
+         response = formatter.formatData("failed","server",MsgType::LOGIN);
+         
+      }
+      else
+      {
+         response = formatter.formatData("succeed","server",MsgType::LOGIN);
+      }
+      
+      sendMsgTo(socketClientFd,response);
+   }
+
+  if( loginSucceed && !serverClosed)
+  {
+      newClient.socketFd = socketClientFd;
+      newClient.port = ntohs(clientAddr.sin_port);
+      newClient.address = inet_ntop(AF_INET,&clientAddr.sin_addr, buffer,sizeof(buffer));
+
+      std::stringstream oss;
+      oss << "conecction from: "<< newClient.address<< ", port: "<< newClient.port<<std::endl;
+      printSafe(oss.str());
+      //if loggin succesfull
+      addNewClient(newClient);
+
+      //launch its own reading thread
+      std::thread clientReadThread {&ChatServerEngine::readServiceThreadFunc,this,newClient};
+      clientReadThread.detach();
+  }
+
+}
+
+std::string ChatServerEngine::readSocket(int socket)
+{
+      //message buffer from the readed socket
+      char buffer[MAXLINE];
+      memset(buffer,0,sizeof(buffer));
+
+      //read if there is data from the client
+      int bytesReceived = recv(socket, buffer, sizeof(buffer), 0);
+      
+      if( bytesReceived < 0 )
+      {
+         int errnocode{};
+         {
+            
+            std::lock_guard<std::mutex> lockthis(m_clientsMutex);
+            errnocode = errno;
+         }
+         if ( errnocode != EINTR )// chek if the read system call was interrupted
+            //we have an error
+            err_sys("fatal error reciving data");
+      }
+       else if ( bytesReceived == 0)
+      {
+         // client left somehow we just break;
+         return std::string();
+      }
+     
+     return std::string(buffer);
+      
+}
+
+
+
+ //read service this is unique for each client
+void ChatServerEngine::readServiceThreadFunc(ClientInfo thisClient)
+{
+   //handle client
+   printSafe("start transaction:",thisClient.socketFd);
+
+   while(!serverClosed)
+   {
+     //read if there is data from the client
+      std::string message = readSocket(thisClient.socketFd);
+      
+      if ( message.empty()) break;
+
+      //Add message to the message queue
+      addMessageToQueue(thisClient.socketFd,message);
+   }
+   
+   findAndRemoveClient(thisClient);
+   printSafe("closing client:",thisClient.socketFd);
+   //close socket
+   thor::Close(thisClient.socketFd);
+   sleep(1);
+}
+
+
+void ChatServerEngine::addMessageToQueue(int clientSocket,const std::string& message)
+{
+   {
+      std::lock_guard<std::mutex> lockMessageQueue(m_messageMutex);
+      messageQueue.push_back(std::pair<int,std::string>(clientSocket,message));
+   }
+}
+// Send service just forward the messages in the message queue to all the clients
+void ChatServerEngine::sendServiceThreadFunc()
+{
+   
+   while(!serverClosed)
+   {
+      { //reduce the scope of the lock
+         std::unique_lock<std::mutex> guard1(m_messageMutex, std::defer_lock);
+         std::unique_lock<std::mutex> guard2(m_clientsMutex, std::defer_lock);
+         std::lock(guard1, guard2);
+         for( auto& msg : messageQueue)
+         {
+            
+            int senderFd = msg.first;
+            std::string message = msg.second;
+            //send the data from the client to others
+            for ( std::size_t i = 0; i < m_clientsList.size();++i)
+            {
+               ClientInfo& currClient = m_clientsList[i];
+               auto receiverFd = currClient.socketFd;
+               bool clientIsConnected =  fcntl(receiverFd, F_GETFD) != -1 || errno != EBADF;
+               
+               if( receiverFd != senderFd)
+               {
+                     
+                  if ( clientIsConnected )
+                  {
+                     printSafe("----------------------");
+                     printSafe(std::string("send: ")+message,receiverFd);   
+                     printSafe("----------------------");
+                     send(receiverFd,message.c_str(),message.size(),0);//Sendata
+                  }
+               }
+            }
+         } 
+         messageQueue.clear();
+      }
+   }
+
+   
+
 }
 
 void ChatServerEngine::installSignalHandlers()
@@ -65,12 +246,16 @@ void ChatServerEngine::installSignalHandlers()
      // ctr+c signal
    setSignalHandler(SIGINT, [](int signo)
    {
+      //notify other threads to finish
+      serverClosed = true;
       //just exit this will close all the sockets open
       exit(0);
    });
    // ctr+c signal
    setSignalHandler(SIGTERM, [](int signo)
    {
+      //notify other threads to finish
+      serverClosed = true;
       //just exit this will close all the sockets open
       exit(0);
    });
@@ -102,24 +287,12 @@ int ChatServerEngine::createServerSocket(int portNumber,const char* serverIpAddr
    return listen_fd;
 }
 
-void ChatServerEngine::addNewClient( const sockaddr_in& client_address, int clientSocketFd)
+void ChatServerEngine::addNewClient( const ClientInfo& newClient)
 {
-    char buffer[40];
-    ClientInfo newClient;
-   
-   // newClient.name = clientName;
-    newClient.socketFd = clientSocketFd;
-    newClient.port = ntohs(client_address.sin_port);
-    newClient.address = inet_ntop(AF_INET,&client_address.sin_addr, buffer,sizeof(buffer));
-
-    std::stringstream oss;
-    oss << "conecction from: "<< newClient.address<< ", port: "<< newClient.port<<std::endl;
-    printSafe(oss.str());
-
     // add the new client to the list for other clients 
     int numClients{};
     {
-      std::lock_guard<std::mutex> lockguard(m_mutex);
+      std::lock_guard<std::mutex> lockguard(m_clientsMutex);
       m_clientsList.push_back(newClient);
       numClients = m_clientsList.size();
     }
@@ -128,86 +301,10 @@ void ChatServerEngine::addNewClient( const sockaddr_in& client_address, int clie
 
 }
 
-//this is the service thread where messages are handle for different clients
-void ChatServerEngine::serviceClient()
-{
-   ClientInfo thisClient;
-   {
-      std::lock_guard<std::mutex> lockthis(m_mutex);
-      thisClient = *(--m_clientsList.end());
-   }
-  
-   //handle client
-   bool connected{true};
-   char buffer[MAXLINE];
-   memset(buffer,0,sizeof(buffer));
-   printSafe("start transaction:",thisClient.socketFd);
-   while(connected)
-   {
-      //read if there is data from the client
-      int bytesReceived = recv(thisClient.socketFd, buffer, sizeof(buffer), 0);
-
-      printSafe("----------------------");
-      printSafe("Client :",thisClient.socketFd);
-      printSafe("bytes received: ", bytesReceived);   
-      printSafe("----------------------");
-      std::string message{"\n["+thisClient.name + "]:"+buffer+'\n'};
-         
-      if( bytesReceived < 0 )
-      {
-         int errnocode{};
-         {
-            std::lock_guard<std::mutex> lockthis(m_mutex);
-            errnocode = errno;
-         }
-            if ( errnocode != EINTR )// chek if the read system call was interrupted
-               //we have an error
-               err_sys("fatal error reciving data");
-         
-      }
-      else if ( bytesReceived == 0 || message == "exit" )
-      {
-         connected = false;
-      }
-      else
-      {
-         //send the message
-         sendMsgToClients(thisClient.socketFd,message);
-         memset(buffer,0,sizeof(buffer));
-      }
-   }
-     
-   //Remove the client from the list if it was not previously removed
-   findAndRemoveClient(thisClient);
-   printSafe("closing client:",thisClient.socketFd);
-   //close socket
-   thor::Close(thisClient.socketFd);
-   sleep(1);
-}
-
-void ChatServerEngine::sendMsgToClients(int senderFd, const std::string& message)
-{
-   // lock the vector
-   std::lock_guard<std::mutex> guard_list(m_mutex);
-   //send the data from the client to others
-   for ( std::size_t i = 0; i < m_clientsList.size();++i)
-   {
-      ClientInfo& currClient = m_clientsList[i];
-      auto receiverFd = currClient.socketFd;
-      bool clientIsConnected =  fcntl(receiverFd, F_GETFD) != -1 || errno != EBADF;
-   
-      if( receiverFd != senderFd)
-      {
-         if ( clientIsConnected )
-            //Sendata
-            send(receiverFd,message.c_str(),message.size(),0);
-      }
-   }
-}
 
 void ChatServerEngine::findAndRemoveClient(const ClientInfo& clientToClose)
 {
-   std::lock_guard<std::mutex> guardClientList(m_mutex);
+   std::lock_guard<std::mutex> guardClientList(m_clientsMutex);
    auto listBegIt = m_clientsList.begin();
    auto listEndIt = m_clientsList.end();
    auto clientToRemove = std::find(listBegIt,listEndIt,clientToClose);
@@ -215,7 +312,7 @@ void ChatServerEngine::findAndRemoveClient(const ClientInfo& clientToClose)
    if( clientToRemove != listEndIt)
    {
       m_clientsList.erase(clientToRemove);
-      std::cout << "client Removed from list:"<<  clientToClose.name<<std::endl;;
+      std::cout << "client Removed from list:"<<  clientToClose.name<<std::endl;
    }
    
 }

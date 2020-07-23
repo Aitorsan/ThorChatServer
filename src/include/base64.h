@@ -5,8 +5,11 @@
 #include <iomanip>
 #include <bitset>
 #include <array>
+#include <vector>
 
-constexpr std::array<unsigned char, 64> encoding_table =
+namespace
+{
+  constexpr std::array<unsigned char, 64> encoding_table =
     {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
      'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
      'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -16,8 +19,10 @@ constexpr std::array<unsigned char, 64> encoding_table =
      'w', 'x', 'y', 'z', '0', '1', '2', '3',
      '4', '5', '6', '7', '8', '9', '+', '/'};
 
-std::string base64(std::string &data)
+
+inline std::string base64(const std::string &data)
 {
+  
 
     std::string base64data{0};
 
@@ -76,4 +81,47 @@ std::string base64(std::string &data)
     }
 
     return base64data;
+}
+
+/*
+
+std::string decodeBase64(std::string& base64Data)
+{
+    /*
+   auto itEnd = base64Data.end();
+   auto found = std::find(base64Data.begin(),itEnd,'=');
+    
+   bool hasPadding {false};
+   if( found != base64Data.end())
+   {
+       //remove the = signs
+       base64Data.erase(found,itEnd);
+       // flag that the last letter have padding
+       hasPadding = true;
+   }
+
+    int dataLength = base64Data.length();
+    for ( int i = 0; i <  dataLength ; i+=4)
+    {
+          
+        std::vector <unsigned char> chars;
+
+        for( int j = i ; i < j+4 ; ++j)
+        {
+            if(  j < dataLength)
+                chars.push_back(base64Data[i]);
+        } 
+
+        int charsSize = chars.size();
+        //TODO: not sure how to do it yet
+        
+
+
+    } 
+
+
+
+
+}*/
+
 }

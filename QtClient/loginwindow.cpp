@@ -15,10 +15,10 @@ LoginWindow::LoginWindow(QWidget* parent)
 
     m_chatWindowIndex = ui->stackedWidget->addWidget(m_chatWindow);
 
-    connect(ui->pushButton, SIGNAL(clicked()),m_chatWindow,SLOT(connectToServer()));
+    connect(ui->pushButton, SIGNAL(clicked()),this,SLOT(initLoggin()));
+    connect( this, SIGNAL(connectToServer(const QString& ,const QString&)), m_chatWindow,SLOT(connectToServer(const QString& , const QString& )));
     connect(m_chatWindow,SIGNAL(userVerified()), this, SLOT(onUserVerified()));
 }
-
 
 void LoginWindow::onUserVerified()
 {
@@ -26,6 +26,13 @@ void LoginWindow::onUserVerified()
   ui->stackedWidget->setCurrentIndex(m_chatWindowIndex);
 }
 
+void LoginWindow::initLoggin()
+{
+   QString userName =  ui->lineEdit->text();
+   QString password =  ui->lineEdit_2->text();
+   
+   emit connectToServer(userName,password);
+}
 
 LoginWindow::~LoginWindow()
 {

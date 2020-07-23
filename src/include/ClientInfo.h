@@ -8,8 +8,11 @@ struct ClientInfo
 {
     std::string name;
     std::string address;
+    std::string password;
+    std::string profileImage;
     int socketFd;
     int port;
+    
     bool isClientConnected()
     {
         return ( fcntl(socketFd, F_GETFD) != -1 || errno != EBADF);

@@ -33,7 +33,7 @@
 
 bin/
 temp/
-
+QtClient/ssuck
 #MACOS
 # General
 .DS_Store
