@@ -1,5 +1,6 @@
 #include "ui_chatwindow.h"
 #include "chatwindow.h"
+#include "CustomTextEdit.h"
 #include <QString>
 #include <QHostAddress>
 #include <QStandardItemModel>
@@ -17,6 +18,7 @@
 ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::ChatWindow)
+    , m_customTextEdit(new CustomTextEdit())
     , m_chatModel(model)
     , m_chatClient(new ChatClient(this))
     , m_userName{}
@@ -26,6 +28,11 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
 {
   ui->setupUi(this);
 
+
+  // create and custom widgets to the ui
+  ui->verticalLayout->addWidget(m_customTextEdit);
+
+  // prepare the html document
   QString htmlStart = "<!DOCTYPE html>\n<html>\n<head>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<link href=\"chatStyle.css\" rel=\"stylesheet\" ctype=\"text/css\">\n</head>\n<body>";
   m_htmlDocList.push_back(htmlStart);
   QString htmlbodyEnd = "</body>";
@@ -33,10 +40,12 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
   m_htmlDocList.push_back(htmlbodyEnd);
   m_htmlDocList.push_back(htmlEnd); 
 
+
+  // connect signals and slots
   connect(m_chatClient, SIGNAL(messageReceived(const QString&,const QString&,const QString &,const QString&)), this, SLOT(msgReceived(const QString&,const QString &,const QString&, const QString&)));
   connect(m_chatClient,SIGNAL(loggedIn()),this,SIGNAL(userVerified()));
 
-  connect(ui->lineEdit, SIGNAL(returnPressed()), this, SLOT(sendMessage()));
+  connect(m_customTextEdit, SIGNAL(returnPressed()), this, SLOT(sendMessage()));
   connect(m_chatClient, &ChatClient::sendLogInData, this, &ChatWindow::sendLogInData);
   //connect(ui->lineEdit,SIGNAL(),this)
   /* connect(QWidget *centralwidget;
@@ -44,7 +53,6 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
     connect(QAction *actiondelete_history;
    connect( QGridLayout *gridLayout;
    connect( QVBoxLayout *verticalLayout;
-    connect(QTextEdit *textEdit;
    connect( QLineEdit *lineEdit;
    connect( QListView *listView;
    connect( QMenuBar *menubar;
@@ -173,13 +181,9 @@ QString ChatWindow::buildLocalHtmlTags(const QString &userName, const QString& m
   m_htmlDocList.push_back(timeTag);
 
   m_htmlDocList.push_back(divEnd);
- /* QString htmlbodyEnd = "</body>";
-  QString htmlEnd = "</html>";
-  m_htmlDocList.push_back(htmlbodyEnd);
-  m_htmlDocList.push_back(htmlEnd);*/
 
-   QString htmldocument;
-   for(auto text : m_htmlDocList)
+  QString htmldocument;
+  for(auto text : m_htmlDocList)
     htmldocument+= text;
   
 
@@ -189,8 +193,8 @@ QString ChatWindow::buildLocalHtmlTags(const QString &userName, const QString& m
 void ChatWindow::sendMessage()
 {
   // Get the message from the line edit
-  QString message = ui->lineEdit->text();
-  ui->lineEdit->setText("");//clear the line edit
+  QString message = m_customTextEdit->toPlainText();
+  m_customTextEdit->clearText();//clear the line edit
   auto time = std::time(nullptr);
   std::stringstream buff;
   buff << std::put_time(std::gmtime(&time), "%d/%m/%y %T%z");

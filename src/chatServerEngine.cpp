@@ -210,7 +210,6 @@ void ChatServerEngine::sendServiceThreadFunc()
          std::lock(guard1, guard2);
          for( auto& msg : messageQueue)
          {
-            
             int senderFd = msg.first;
             std::string message = msg.second;
             //send the data from the client to others
@@ -233,7 +232,8 @@ void ChatServerEngine::sendServiceThreadFunc()
                }
             }
          } 
-         messageQueue.clear();
+         if( m_clientsList.size() > 1 )
+            messageQueue.clear();
       }
    }
 

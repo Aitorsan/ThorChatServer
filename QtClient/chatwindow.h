@@ -10,7 +10,7 @@ namespace Ui { class ChatWindow;}
 QT_END_NAMESPACE
 
 class QStandardItemModel;
-
+class CustomTextEdit;
 class ChatWindow: public QWidget
 {
 	Q_OBJECT
@@ -33,6 +33,7 @@ private:
 	QString buildLocalHtmlTags(const QString& userName,const QString& message, const QString& time,const QString& userImage);
 
 	Ui::ChatWindow* ui;
+	CustomTextEdit* m_customTextEdit;
 	QStandardItemModel& m_chatModel;
 	ChatClient* m_chatClient;
 	QString m_userName;

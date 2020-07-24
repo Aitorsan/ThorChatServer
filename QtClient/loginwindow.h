@@ -11,6 +11,7 @@ namespace Ui
 QT_END_NAMESPACE
 
 class ChatWindow;
+class SignUpWindow;
 class QStandardItemModel;
 
 class LoginWindow : public QMainWindow
@@ -23,6 +24,7 @@ public:
 public slots:
     void onUserVerified();
     void initLoggin();
+    void initSingUp();
 
 signals:
     void verifyUser();
@@ -31,7 +33,9 @@ private:
     Ui::LoginWindow* ui;
     QStandardItemModel *m_chatModel;
     ChatWindow* m_chatWindow;
+    SignUpWindow* m_signUpWindow;
     int m_chatWindowIndex;
+    int m_singUpIndex;
 };
 
 

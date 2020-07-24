@@ -22,6 +22,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-SOURCES += main.cpp chatwindow.cpp chatclient.cpp loginwindow.cpp
-FORMS+= chatwindow.ui loginwindow.ui
-HEADERS += chatwindow.h chatclient.h loginwindow.h
+SOURCES += main.cpp chatwindow.cpp chatclient.cpp loginwindow.cpp CustomTextEdit.cpp SignUpWindow.cpp
+FORMS+= chatwindow.ui loginwindow.ui signupwindow.ui
+HEADERS += chatwindow.h chatclient.h loginwindow.h CustomTextEdit.h SignUpWindow.h

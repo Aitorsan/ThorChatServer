@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>563</width>
-    <height>430</height>
+    <width>587</width>
+    <height>421</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -51,15 +51,18 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit">
-          <property name="minimumSize">
-           <size>
-            <width>300</width>
-            <height>80</height>
-           </size>
+         <widget class="Line" name="line">
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
           </property>
-          <property name="placeholderText">
-           <string>    Message...</string>
+          <property name="lineWidth">
+           <number>9</number>
+          </property>
+          <property name="midLineWidth">
+           <number>9</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>

@@ -53,16 +53,24 @@ OBJECTS_DIR   = ./
 SOURCES       = main.cpp \
 		chatwindow.cpp \
 		chatclient.cpp \
-		loginwindow.cpp moc_chatwindow.cpp \
+		loginwindow.cpp \
+		CustomTextEdit.cpp \
+		SignUpWindow.cpp moc_chatwindow.cpp \
 		moc_chatclient.cpp \
-		moc_loginwindow.cpp
+		moc_loginwindow.cpp \
+		moc_CustomTextEdit.cpp \
+		moc_SignUpWindow.cpp
 OBJECTS       = main.o \
 		chatwindow.o \
 		chatclient.o \
 		loginwindow.o \
+		CustomTextEdit.o \
+		SignUpWindow.o \
 		moc_chatwindow.o \
 		moc_chatclient.o \
-		moc_loginwindow.o
+		moc_loginwindow.o \
+		moc_CustomTextEdit.o \
+		moc_SignUpWindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
@@ -144,10 +152,14 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
 		ssuck.pro chatwindow.h \
 		chatclient.h \
-		loginwindow.h main.cpp \
+		loginwindow.h \
+		CustomTextEdit.h \
+		SignUpWindow.h main.cpp \
 		chatwindow.cpp \
 		chatclient.cpp \
-		loginwindow.cpp
+		loginwindow.cpp \
+		CustomTextEdit.cpp \
+		SignUpWindow.cpp
 QMAKE_TARGET  = ssuck
 DESTDIR       = 
 TARGET        = ssuck
@@ -156,7 +168,7 @@ TARGET        = ssuck
 first: all
 ####### Build rules
 
-$(TARGET): ui_chatwindow.h ui_loginwindow.h $(OBJECTS)  
+$(TARGET): ui_chatwindow.h ui_loginwindow.h ui_signupwindow.h $(OBJECTS)  
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 Makefile: ssuck.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -343,9 +355,9 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents chatwindow.h chatclient.h loginwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp chatwindow.cpp chatclient.cpp loginwindow.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents chatwindow.ui loginwindow.ui $(DISTDIR)/
+	$(COPY_FILE) --parents chatwindow.h chatclient.h loginwindow.h CustomTextEdit.h SignUpWindow.h $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp chatwindow.cpp chatclient.cpp loginwindow.cpp CustomTextEdit.cpp SignUpWindow.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents chatwindow.ui loginwindow.ui signupwindow.ui $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -377,9 +389,9 @@ compiler_moc_predefs_clean:
 moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 	g++ -pipe -O2 -std=gnu++11 -Wall -W -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: moc_chatwindow.cpp moc_chatclient.cpp moc_loginwindow.cpp
+compiler_moc_header_make_all: moc_chatwindow.cpp moc_chatclient.cpp moc_loginwindow.cpp moc_CustomTextEdit.cpp moc_SignUpWindow.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_chatwindow.cpp moc_chatclient.cpp moc_loginwindow.cpp
+	-$(DEL_FILE) moc_chatwindow.cpp moc_chatclient.cpp moc_loginwindow.cpp moc_CustomTextEdit.cpp moc_SignUpWindow.cpp
 moc_chatwindow.cpp: chatclient.h \
 		chatwindow.h \
 		moc_predefs.h \
@@ -396,11 +408,22 @@ moc_loginwindow.cpp: loginwindow.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWebKit -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include loginwindow.h -o moc_loginwindow.cpp
 
+moc_CustomTextEdit.cpp: CustomTextEdit.h \
+		moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWebKit -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include CustomTextEdit.h -o moc_CustomTextEdit.cpp
+
+moc_SignUpWindow.cpp: chatclient.h \
+		SignUpWindow.h \
+		moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWebKit -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include SignUpWindow.h -o moc_SignUpWindow.cpp
+
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
-compiler_uic_make_all: ui_chatwindow.h ui_loginwindow.h
+compiler_uic_make_all: ui_chatwindow.h ui_loginwindow.h ui_signupwindow.h
 compiler_uic_clean:
-	-$(DEL_FILE) ui_chatwindow.h ui_loginwindow.h
+	-$(DEL_FILE) ui_chatwindow.h ui_loginwindow.h ui_signupwindow.h
 ui_chatwindow.h: chatwindow.ui \
 		/usr/lib/qt5/bin/uic \
 		/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets/QWebView
@@ -409,6 +432,10 @@ ui_chatwindow.h: chatwindow.ui \
 ui_loginwindow.h: loginwindow.ui \
 		/usr/lib/qt5/bin/uic
 	/usr/lib/qt5/bin/uic loginwindow.ui -o ui_loginwindow.h
+
+ui_signupwindow.h: signupwindow.ui \
+		/usr/lib/qt5/bin/uic
+	/usr/lib/qt5/bin/uic signupwindow.ui -o ui_signupwindow.h
 
 compiler_yacc_decl_make_all:
 compiler_yacc_decl_clean:
@@ -425,7 +452,8 @@ main.o: main.cpp loginwindow.h
 
 chatwindow.o: chatwindow.cpp ui_chatwindow.h \
 		chatwindow.h \
-		chatclient.h
+		chatclient.h \
+		CustomTextEdit.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o chatwindow.o chatwindow.cpp
 
 chatclient.o: chatclient.cpp chatclient.h
@@ -434,8 +462,17 @@ chatclient.o: chatclient.cpp chatclient.h
 loginwindow.o: loginwindow.cpp ui_loginwindow.h \
 		chatwindow.h \
 		chatclient.h \
-		loginwindow.h
+		loginwindow.h \
+		SignUpWindow.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o loginwindow.o loginwindow.cpp
+
+CustomTextEdit.o: CustomTextEdit.cpp CustomTextEdit.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CustomTextEdit.o CustomTextEdit.cpp
+
+SignUpWindow.o: SignUpWindow.cpp ui_signupwindow.h \
+		SignUpWindow.h \
+		chatclient.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o SignUpWindow.o SignUpWindow.cpp
 
 moc_chatwindow.o: moc_chatwindow.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_chatwindow.o moc_chatwindow.cpp
@@ -445,6 +482,12 @@ moc_chatclient.o: moc_chatclient.cpp
 
 moc_loginwindow.o: moc_loginwindow.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_loginwindow.o moc_loginwindow.cpp
+
+moc_CustomTextEdit.o: moc_CustomTextEdit.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_CustomTextEdit.o moc_CustomTextEdit.cpp
+
+moc_SignUpWindow.o: moc_SignUpWindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_SignUpWindow.o moc_SignUpWindow.cpp
 
 ####### Install
 
