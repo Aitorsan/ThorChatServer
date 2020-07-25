@@ -4,23 +4,30 @@ LINKER:=g++
 CC:=gcc
 CXX=g++
 CXXFLAGS:=-g -std=c++11 -Wall
-LDFLAGS:=-pthread
+LDFLAGS:=-pthread -ldl
 SRC_DIR:=src
-INCLUDE:=-I./src/include -I./3dparty
-OBJ_DIR:=./temp
+INCLUDE:=-I./src/include -I./src/3dparty
+OBJ_DIR:=temp
 
-SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
-OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SOURCES))
+ALLCPPS := $(shell find $(SRC_DIR) -type f -iname "*.cpp")# find all .cpp files
+ALLCS := $(shell find $(SRC_DIR) -type f -iname "*.c")# find all .c files
+ALLCSOBJS:= $(patsubst %.c,%.o,$(ALLCS))
+ALLCPPSOBJS := $(patsubst %.cpp,%.o,$(ALLCPPS))
+ALLSOURCES_SUBDIRS := $(shell find $(SRC_DIR) -type d -not -path $(SRC_DIR)/include )
+OBJECTS_SUBDIRS := $(patsubst $(SRC_DIR)%, $(OBJ_DIR)%, $(ALLSOURCES_SUBDIRS))
 
-.PHONY: clean run clean_dirs 
+.PHONY: clean run clean_dirs $(OBJECTS_SUBDIRS)
   
-$(EXEC_NAME): $(OBJECTS) | $(EXEC_DIR)
-	$(CXX) $(LDFLAGS) $^ -o $(EXEC_DIR)/$(EXEC_NAME)
+$(EXEC_NAME): $(ALLCSOBJS) $(ALLCPPSOBJS) $(EXEC_DIR)
+	$(CXX) $(patsubst $(SRC_DIR)%,$(OBJ_DIR)%,$(ALLCPPSOBJS) $(ALLCSOBJS)) $(LDFLAGS) -o  $(EXEC_DIR)/$@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $^ -o $@
+%.o: %.cpp $(OBJECTS_SUBDIRS)
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $(patsubst $(SRC_DIR)%,$(OBJ_DIR)%,$@)
 
-$(OBJ_DIR):
+%.o: %.c $(OBJECTS_SUBDIRS)
+	$(CC) $(INCLUDE) -c $< -o $(patsubst $(SRC_DIR)%,$(OBJ_DIR)%,$@)
+
+$(OBJECTS_SUBDIRS):
 	mkdir -p $@
 
 $(EXEC_DIR):
@@ -30,14 +37,19 @@ run: $(EXEC_NAME)
 	 $(EXEC_DIR)/$^
 
 dbg:
-	$(info $(SOURCES))
+	$(info $(ALLSOURCES_SUBDIRS))
+	$(info $(OBJECTS_SUBDIRS))
+	$(info $(ALLCPPSOBJS))
+	$(info $(ALLCSOBJS))
+	$(info $(ALLCPPS))
+	$(info $(ALLCS))
 
 clean:
-	rm -rf $(EXEC_DIR)/$(EXEC_NAME) $(OBJ_DIR)/*.o
+	rm -rf $(EXEC_DIR)/$(EXEC_NAME) $(OBJ_DIR)
 
-######################################################
-# Build the default client
-#####################################################
+#############################################################
+# Build the default  test client ( This client is deprecated)
+#############################################################
 CLIENT_SRC_DIR:=./client/src
 CLIENT_OBJS_DIR:=./client/temp
 CLIENT_NAME:=client

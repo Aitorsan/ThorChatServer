@@ -53,6 +53,8 @@
         "regex": "cpp",
         "list": "cpp",
         "numeric": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "forward_list": "cpp",
+        "valarray": "cpp"
     }
 }

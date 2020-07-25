@@ -4,7 +4,7 @@
 #include <time.h>
 #include <sstream>
 #include <fstream>
-
+#include "base64.h"
 
 std::string ReadImage()
 {
@@ -24,7 +24,7 @@ void SaveFile(std::string imageData)
 
 int main()
 {
-
+	    
    ChatServerEngine server;
 
    server.initializeServer(SERVER_PORT);

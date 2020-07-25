@@ -9,7 +9,6 @@ SignUpWindow::SignUpWindow(QWidget* parent)
     ,ui(new Ui::SignUpWindow)
 {
     ui->setupUi(this);
-
 }
 
 

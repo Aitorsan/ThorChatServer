@@ -6,7 +6,7 @@
 *.lo
 *.o
 *.obj
-
+sqlite3
 # Precompiled Headers
 *.gch
 *.pch
