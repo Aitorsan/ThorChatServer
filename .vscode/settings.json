@@ -55,6 +55,10 @@
         "numeric": "cpp",
         "iomanip": "cpp",
         "forward_list": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "any": "cpp",
+        "unordered_set": "cpp",
+        "set": "cpp",
+        "variant": "cpp"
     }
 }
