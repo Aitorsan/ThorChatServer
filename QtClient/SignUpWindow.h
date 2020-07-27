@@ -19,6 +19,12 @@ public:
 	explicit SignUpWindow(QWidget *parent = nullptr);
     ~SignUpWindow();
 
+signals:
+    void connectToServer(const QString&,const QString&);
+
+public slots:
+    void singUpConnection();
+    void restoreTextState();
 
 private:
 

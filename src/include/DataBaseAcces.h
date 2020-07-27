@@ -9,7 +9,8 @@ extern "C"
 
 class DataBaseAccess
 {
-using database = std::unique_ptr <sqlite3,decltype(&sqlite3_close)>;
+using Sqlite3Database = std::unique_ptr <sqlite3,decltype(&sqlite3_close)>;
+using SqlStatement = std::unique_ptr <sqlite3_stmt,decltype(&sqlite3_finalize)>;
 
 public:
     
@@ -23,9 +24,14 @@ public:
     
 private:
     
-    database openDataBase( const char* dbName);
-    
-    database db;
+    Sqlite3Database openDataBase( const char* dbName);
+    SqlStatement createSqlStatement(const std::string& sqlStatement);
+    void beginTransaction();
+    void commitTransaction();
+    void rollbackTransaction();
+    void execute(const char* sql);
+   
+    Sqlite3Database db;
 
 };
 

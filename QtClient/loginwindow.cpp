@@ -37,16 +37,20 @@ void LoginWindow::initLoggin()
 {
    QString userName =  ui->lineEdit->text();
    QString password =  ui->lineEdit_2->text();
-   
-   emit connectToServer(userName,password);
+   onUserVerified();
+   //emit connectToServer(userName,password);
 }
 
 void LoginWindow::initSingUp()
 {
-
     ui->stackedWidget->setCurrentIndex(m_singUpIndex);
-
 }
+void LoginWindow::changeToLogInWindow()
+{
+   ui->stackedWidget->setCurrentIndex(0);
+}
+
+
 LoginWindow::~LoginWindow()
 {
     delete ui;

@@ -2,7 +2,7 @@
 #define CHATWINDOW_H
 
 #include "chatclient.h"
-#include <QWidget>
+#include <QMainWindow>
 #include <QString>
 
 QT_BEGIN_NAMESPACE
@@ -11,7 +11,7 @@ QT_END_NAMESPACE
 
 class QStandardItemModel;
 class CustomTextEdit;
-class ChatWindow: public QWidget
+class ChatWindow: public QMainWindow
 {
 	Q_OBJECT
 	Q_DISABLE_COPY(ChatWindow)

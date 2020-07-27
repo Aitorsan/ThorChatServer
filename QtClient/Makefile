@@ -413,8 +413,7 @@ moc_CustomTextEdit.cpp: CustomTextEdit.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWebKit -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include CustomTextEdit.h -o moc_CustomTextEdit.cpp
 
-moc_SignUpWindow.cpp: chatclient.h \
-		SignUpWindow.h \
+moc_SignUpWindow.cpp: SignUpWindow.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/home/aitor/Desktop/Data_Linux/Programming/Projects/c++/ChatServer/QtClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWebKitWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtWebKit -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include SignUpWindow.h -o moc_SignUpWindow.cpp
@@ -470,8 +469,7 @@ CustomTextEdit.o: CustomTextEdit.cpp CustomTextEdit.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o CustomTextEdit.o CustomTextEdit.cpp
 
 SignUpWindow.o: SignUpWindow.cpp ui_signupwindow.h \
-		SignUpWindow.h \
-		chatclient.h
+		SignUpWindow.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o SignUpWindow.o SignUpWindow.cpp
 
 moc_chatwindow.o: moc_chatwindow.cpp 

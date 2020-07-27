@@ -25,6 +25,7 @@ public slots:
     void onUserVerified();
     void initLoggin();
     void initSingUp();
+    void changeToLogInWindow();
 
 signals:
     void verifyUser();

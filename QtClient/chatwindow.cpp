@@ -11,12 +11,15 @@
 #include <QIODevice>
 #include <fstream>
 #include <QDir>
+#include <QAction>
+#include <QMenu>
+#include <QToolBar>
 #include <chrono>
 #include <sstream>
 #include <iomanip>
 
 ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
-    : QWidget(parent)
+    : QMainWindow(parent)
     , ui(new Ui::ChatWindow)
     , m_customTextEdit(new CustomTextEdit())
     , m_chatModel(model)
@@ -28,9 +31,9 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
 {
   ui->setupUi(this);
 
-
   // create and custom widgets to the ui
   ui->verticalLayout->addWidget(m_customTextEdit);
+
 
   // prepare the html document
   QString htmlStart = "<!DOCTYPE html>\n<html>\n<head>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<link href=\"chatStyle.css\" rel=\"stylesheet\" ctype=\"text/css\">\n</head>\n<body>";
