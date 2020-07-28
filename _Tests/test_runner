@@ -1,0 +1,31 @@
+#!/bin/bash
+vars=$(ls -p | grep -v / | grep _test | cut -d _ -f 1 | grep -v run)
+
+space=" "
+for word in $vars
+do  
+    found=$(find ../ -type f -iname ${word}.cpp)
+    if [ ! -z "$found" ]
+    then
+      sources=$sources$space$found
+    fi
+done
+echo -e "\n\e[33m**********************************************\e[0m"
+echo -e "\e[33m* Compiling sources files needed by tests   *\e[0m"
+echo -e "\n\e[33m*********************************************\e[0m\n"
+
+make compile_test_cpps TEST_SRC="$sources"
+sleep 5
+echo -e "\n\e[33m**************************************\e[0m"
+echo -e "\e[33m* Compiling tests *\e[0m"
+echo -e "\n\e[33m**************************************\e[0m\n"
+make compile
+
+sleep 5
+echo -e "\n\e[33m**************************************\e[0m"
+echo -e "\e[33m* Running tests... *\e[0m"
+echo -e "\n\e[33m**************************************\e[0m\n"
+sleep 5
+
+make run_tests
+make clean_objs
