@@ -71,6 +71,7 @@ bool ChatServerEngine::run()
 
 }
 
+//This one thread loginService per user
 void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in clientAddr)
 {
    bool loginSucceed{false};
@@ -88,7 +89,6 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
 
       formatter.parseLoginInfo(newClient,initMessage);
       
-
       /// check database for user name and password
       std::cout << "name:"<<newClient.name << std::endl;
       std::cout << "password"<< newClient.password << std::endl;
@@ -103,12 +103,12 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
          // formatter.parseSignInInfo()
 
          //Send a message repeat the information
-         response = formatter.formatData("failed","server",MsgType::LOGIN);
+         response = formatter.formatData("failed","server",MsgType::LOGIN_RESPONSE);
          
       }
       else
       {
-         response = formatter.formatData("succeed","server",MsgType::LOGIN);
+         response = formatter.formatData("succeed","server",MsgType::LOGIN_RESPONSE);
       }
       
       sendMsgTo(socketClientFd,response);
@@ -123,9 +123,11 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
       std::stringstream oss;
       oss << "conecction from: "<< newClient.address<< ", port: "<< newClient.port<<std::endl;
       printSafe(oss.str());
-      //if loggin succesfull
+      //if loggin succesfull add the user to the users list
       addNewClient(newClient);
-
+      //notify to other clients a new user have joined the chat
+      std::string userJoinedMsg = formatter.formatData("succeed","server",MsgType::USER_JOINED);
+      addMessageToQueue(socketClientFd,userJoinedMsg);
       //launch its own reading thread
       std::thread clientReadThread {&ChatServerEngine::readServiceThreadFunc,this,newClient};
       clientReadThread.detach();
@@ -233,7 +235,7 @@ void ChatServerEngine::sendServiceThreadFunc()
             }
          } 
          if( m_clientsList.size() > 1 )
-            messageQueue.clear();
+            messageQueue.clear();//need a cache for messages
       }
    }
 

@@ -5,7 +5,8 @@ enum MsgType
 {
    IMAGE,
    MESSAGE,
-   LOGIN
+   LOGIN_RESPONSE,
+   USER_JOINED
    
 };
 
