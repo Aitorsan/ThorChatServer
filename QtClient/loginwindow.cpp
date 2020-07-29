@@ -8,8 +8,7 @@
 LoginWindow::LoginWindow(QWidget* parent)
     :QMainWindow(parent)
     ,ui(new Ui::LoginWindow)
-    ,m_chatModel(new QStandardItemModel(this)) 
-    ,m_chatWindow(new ChatWindow(*m_chatModel,nullptr))
+    ,m_chatWindow(new ChatWindow(this))
     ,m_signUpWindow( new SignUpWindow(this))
     ,m_chatWindowIndex{0}
     ,m_singUpIndex{0}
@@ -37,8 +36,8 @@ void LoginWindow::initLoggin()
 {
    QString userName =  ui->lineEdit->text();
    QString password =  ui->lineEdit_2->text();
-   onUserVerified();
-   //emit connectToServer(userName,password);
+   //onUserVerified();
+   emit connectToServer(userName,password);
 }
 
 void LoginWindow::initSingUp()

@@ -32,7 +32,6 @@ signals:
     void connectToServer(const QString& ,const QString&);
 private:
     Ui::LoginWindow* ui;
-    QStandardItemModel *m_chatModel;
     ChatWindow* m_chatWindow;
     SignUpWindow* m_signUpWindow;
     int m_chatWindowIndex;

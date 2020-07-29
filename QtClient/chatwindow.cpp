@@ -18,11 +18,11 @@
 #include <sstream>
 #include <iomanip>
 
-ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
+ChatWindow::ChatWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::ChatWindow)
     , m_customTextEdit(new CustomTextEdit())
-    , m_chatModel(model)
+    , m_chatModel(new QStandardItemModel(this))
     , m_chatClient(new ChatClient(this))
     , m_userName{}
     , m_password{}
@@ -34,6 +34,10 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
   // create and custom widgets to the ui
   ui->verticalLayout->addWidget(m_customTextEdit);
 
+  // the model for the messages will have 1 column
+  m_chatModel->insertColumn(0);
+  //set the model for the list view
+  ui->listView->setModel(m_chatModel);
 
   // prepare the html document
   QString htmlStart = "<!DOCTYPE html>\n<html>\n<head>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<link href=\"chatStyle.css\" rel=\"stylesheet\" ctype=\"text/css\">\n</head>\n<body>";
@@ -47,6 +51,7 @@ ChatWindow::ChatWindow(QStandardItemModel &model, QWidget *parent)
   // connect signals and slots
   connect(m_chatClient, SIGNAL(messageReceived(const QString&,const QString&,const QString &,const QString&)), this, SLOT(msgReceived(const QString&,const QString &,const QString&, const QString&)));
   connect(m_chatClient,SIGNAL(loggedIn()),this,SIGNAL(userVerified()));
+  connect(m_chatClient,SIGNAL(userJoined(const QString &)),this,SLOT(addUserToListView(const QString&)));
 
   connect(m_customTextEdit, SIGNAL(returnPressed()), this, SLOT(sendMessage()));
   connect(m_chatClient, &ChatClient::sendLogInData, this, &ChatWindow::sendLogInData);
@@ -212,4 +217,19 @@ void ChatWindow::sendMessage()
   QString formattedMsg = m_chatClient->formatMessage(m_userName,sentTime,message);
 
   m_chatClient->sendMessage(formattedMsg);
+}
+
+
+
+void ChatWindow::addUserToListView(const QString& newUserLogged)
+{
+  // store the index of the new row to append to the model containing the users
+  int newRow = m_chatModel->rowCount();
+
+  // insert row for the username
+  m_chatModel->insertRow(newRow);
+
+  // store the username in the model
+  m_chatModel->setData(m_chatModel->index(newRow,0), newUserLogged);
+   
 }

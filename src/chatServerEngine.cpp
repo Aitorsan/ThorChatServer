@@ -125,8 +125,11 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
       printSafe(oss.str());
       //if loggin succesfull add the user to the users list
       addNewClient(newClient);
+
+      // send a random image for the user messages based on the connection time
+
       //notify to other clients a new user have joined the chat
-      std::string userJoinedMsg = formatter.formatData("succeed","server",MsgType::USER_JOINED);
+      std::string userJoinedMsg = formatter.formatData("user logged in",newClient.name,MsgType::USER_JOINED);
       addMessageToQueue(socketClientFd,userJoinedMsg);
       //launch its own reading thread
       std::thread clientReadThread {&ChatServerEngine::readServiceThreadFunc,this,newClient};

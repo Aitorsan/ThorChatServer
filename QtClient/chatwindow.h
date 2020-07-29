@@ -16,7 +16,7 @@ class ChatWindow: public QMainWindow
 	Q_OBJECT
 	Q_DISABLE_COPY(ChatWindow)
 public:
-	explicit ChatWindow(QStandardItemModel& model,QWidget* parent = nullptr );
+	explicit ChatWindow(QWidget* parent = nullptr );
     ~ChatWindow();
     void loadHtmlConversation(const QString& html);
 
@@ -28,13 +28,14 @@ public slots:
 	void msgReceived(const QString& sender,const QString &msg,const QString& time,const QString& image);
     void connectToServer(const QString&, const QString&);
 	void sendLogInData();
+	void addUserToListView(const QString&);
 private:
 	QString buildHtmlRecievedMsgTags(const QString &username, const QString &message,const QString& time, const QString &userImage);
 	QString buildLocalHtmlTags(const QString& userName,const QString& message, const QString& time,const QString& userImage);
 
 	Ui::ChatWindow* ui;
 	CustomTextEdit* m_customTextEdit;
-	QStandardItemModel& m_chatModel;
+    QStandardItemModel *m_chatModel;
 	ChatClient* m_chatClient;
 	QString m_userName;
   	QString m_password;

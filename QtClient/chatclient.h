@@ -25,9 +25,6 @@ public slots:
     void connectToServer(const QHostAddress &address, quint16 port);
     void sendMessage(const QString &text);
     void disconnectFromHost();
-
-
-private slots:
     void onReadyRead();
   
 signals:

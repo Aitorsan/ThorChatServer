@@ -39,10 +39,11 @@ DataBaseAccess::SqlStatement DataBaseAccess::createSqlStatement(const std::strin
 
 std::string DataBaseAccess::querryString(const char *querry)
 {
-	beginTransaction();
+	/*beginTransaction();
 	execute(querry);
 	commitTransaction();
-	rollbackTransaction();
+	rollbackTransaction();*/
+	return "succed";
 }
 
 DataBaseAccess::Sqlite3Database DataBaseAccess::openDataBase(const char *dbName)
