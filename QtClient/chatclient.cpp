@@ -18,9 +18,7 @@
 #include <iomanip>
 
 ChatClient::ChatClient(QObject *parent)
-    : QObject(parent)
-    , m_clientSocket(new QTcpSocket(this))
-    , m_loggedIn(false)
+    : QObject(parent), m_clientSocket(new QTcpSocket(this)), m_msgBuffer{}, m_loggedIn(false)
 {
     // Forward the connected and disconnected signals
     connect(m_clientSocket, SIGNAL(connected()), this, SIGNAL(connected()));
@@ -60,7 +58,7 @@ void ChatClient::saveImage(std::string &name, const std::string &imageData)
 
 QString ChatClient::formatMessage(MessageData &msg, const MsgType &msgtype)
 {
-     // compute the time
+    // compute the time
     auto time = std::time(nullptr);
     std::stringstream buff;
     buff << std::put_time(std::gmtime(&time), "%d/%m/%y %T");
@@ -70,17 +68,28 @@ QString ChatClient::formatMessage(MessageData &msg, const MsgType &msgtype)
 
     switch (msgtype)
     {
-        case IMAGE:         type = "image";  break;
-        case MESSAGE:       break;
-        case LOGIN:         type = "login";  break;
-        case SIGN_UP:       type = "signup"; break;
-        case USER_JOINED:   type = "user-joined"; break;
-        case USER_LEFT:     type = "user-left"; break;
+    case IMAGE:
+        type = "image";
+        break;
+    case MESSAGE:
+        break;
+    case LOGIN:
+        type = "login";
+        break;
+    case SIGN_UP:
+        type = "signup";
+        break;
+    case USER_JOINED:
+        type = "user-joined";
+        break;
+    case USER_LEFT:
+        type = "user-left";
+        break;
     }
-    
-    msg.m_type = type;// this ensures that we did not type wrong the type
+
+    msg.m_type = type; // this ensures that we did not type wrong the type
     msg.m_time = QString::fromStdString(buff.str());
-    
+
     QJsonObject jsonMessage;
     jsonMessage.insert("type", QJsonValue::fromVariant(msg.m_type));
     jsonMessage.insert("id", QJsonValue::fromVariant(msg.m_id));
@@ -91,7 +100,7 @@ QString ChatClient::formatMessage(MessageData &msg, const MsgType &msgtype)
     jsonMessage.insert("image-extension", QJsonValue::fromVariant(msg.m_imageExtension));
 
     QJsonDocument doc(jsonMessage);
-    qDebug() << doc.toJson();
+    //qDebug() << doc.toJson();
 
     return doc.toJson();
 }
@@ -199,49 +208,59 @@ void ChatClient::ParseData(const QJsonObject &docObj)
 
         emit userLeft(msg);
     }
+    m_msgBuffer.clear();
 }
 
 /* slot called by TCP socket when there is data to read*/
 void ChatClient::onReadyRead()
 {
-    // prepare a container to hold the UTF-8 encoded we receive from the socket
-    QByteArray textData{};
 
     qDebug() << "\n--------\nonReadyRead\n---------";
 
-    // we start a transaction so we can revert to the previous state in case we try to read more data than is available on the socket
-    
-    //TODO: find a way to read this crap
+    //if we find the curly brace it means that we have a complete message
+    auto indexEnd = m_msgBuffer.indexOf('}');
+
     m_clientSocket->startTransaction();
-    textData = m_clientSocket->readAll();
-    qDebug() << "size: " << textData.size();
-    m_clientSocket->rollbackTransaction();
-
-    // we successfully read some data now make sure it's in fact a valid JSON
-    QJsonParseError parseError;
-    //find and remove any extra characters at the end
-    auto index = textData.indexOf('}');
-    textData.remove(index + 1, textData.size());
-
-    QDebug deb = qDebug();
-    for (auto all : textData)
-        deb << all;
-    qDebug() << "";
-
-    // we try to create a json document with the data we received
-    const QJsonDocument jsonDoc = QJsonDocument::fromJson(textData, &parseError);
-    if (parseError.error == QJsonParseError::NoError)
+    if (indexEnd == -1)
     {
-        qDebug() << "\n----\nValid json";
-        // if the data was indeed valid JSON
-        if (jsonDoc.isObject())          // and is a JSON object
-            ParseData(jsonDoc.object()); // parse the JSON
+        QByteArray temp = m_clientSocket->readAll();
+        for( int i = 0; i < temp.size();++i)
+        {
+            m_msgBuffer.push_back(temp[i]);
+        }
     }
     else
     {
-        qDebug() << parseError.errorString();
+        m_msgBuffer = m_clientSocket->readAll();
     }
-    m_clientSocket->flush();
+
+    qDebug() << "size: " << m_msgBuffer.size();
+    m_clientSocket->commitTransaction();
+//if we find the curly brace it means that we have a complete message
+    auto index = m_msgBuffer.indexOf('}');
+    if (index != -1)
+    {
+        //remove newlines at the end or any weird character
+        m_msgBuffer.remove(index + 1, m_msgBuffer.size());
+        QDebug deb = qDebug();
+        for (auto all : m_msgBuffer)
+            deb << all;
+        //make sure it's in fact a valid JSON
+        QJsonParseError parseError;
+        // we try to create a json document with the data we received
+        const QJsonDocument jsonDoc = QJsonDocument::fromJson(m_msgBuffer, &parseError);
+        if (parseError.error == QJsonParseError::NoError)
+        {
+            qDebug() << "\n----\nValid json\n----\n";
+            // if the data was indeed valid JSON
+            if (jsonDoc.isObject())          // and is a JSON object
+                ParseData(jsonDoc.object()); // parse the JSON
+        }
+        else
+        {
+            qDebug() << parseError.errorString();
+        }
+    }
 }
 
 void ChatClient::verifyLogInStatus(const MessageData &msg)

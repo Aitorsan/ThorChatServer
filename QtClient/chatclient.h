@@ -41,6 +41,7 @@ private:
     void verifyLogInStatus(const MessageData& msg);
 
     QTcpSocket* m_clientSocket;
+    QByteArray m_msgBuffer;
     bool m_loggedIn;
 };
 

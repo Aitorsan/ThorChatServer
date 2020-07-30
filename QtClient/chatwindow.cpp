@@ -16,6 +16,7 @@
 #include <QMenu>
 #include <QToolBar>
 #include <QList>
+#include <QDebug>
 #include <fstream>
 #include <sstream>
 #include <chrono>
@@ -86,6 +87,8 @@ void ChatWindow::loadProfileImage()
    os << std::ifstream(file.toStdString(), std::ios::binary).rdbuf();
    //Encode the image in base64 and asssign the image to the user image
    m_image = QString::fromStdString(os.str()).toUtf8().toBase64();
+
+   qDebug() << "READ IMAGE:" << m_image;
 
 }
 
@@ -190,6 +193,8 @@ QString ChatWindow::buildLocalHtmlTags(const MessageData& localMsg)
   imageTag += "base64,";
   imageTag += localMsg.m_base64Image;
   imageTag += "\" class=\"right\">";
+
+  qDebug() << imageTag;
   m_htmlDocList.push_back(imageTag);
 
   QString nameTag = "<span><strong>";
