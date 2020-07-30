@@ -26,7 +26,7 @@ public slots:
     void initLoggin();
     void initSingUp();
     void changeToLogInWindow();
-
+    void showError(const QString&);
 signals:
     void verifyUser();
     void connectToServer(const QString& ,const QString&);

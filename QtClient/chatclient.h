@@ -1,12 +1,13 @@
 #ifndef CHATCLIENT_H
 #define CHATCLIENT_H
 
+#include "messageData.h"
 #include <QObject>
 #include <QAbstractSocket>
-
 class QHostAddress;
 class QTcpSocket;
 class QJsonObject;
+class QVariant;
 
 class ChatClient : public QObject
 {
@@ -16,10 +17,8 @@ public:
     explicit ChatClient(QObject *parent = nullptr);
     void saveImage(std::string& name, const std::string& imageData );
     void ParseData(const QJsonObject& docObj);
-    void verifyLogIn(const QString& sender,const QString& data);
-    QString formatLogginMessage(const QString& username,const QString& password,const QString& time);
-    QString formatMessage(const QString& username,const QString& time,const QString& html);
-
+    QString formatMessage(MessageData& msg, const MsgType &type);
+    QString decodeBase64Data(const QVariant& base64data);
 
 public slots:
     void connectToServer(const QHostAddress &address, quint16 port);
@@ -33,11 +32,14 @@ signals:
     void loggedIn();
     void loginError(const QString &reason);
     void disconnected();
-    void messageReceived(const QString& sender,const QString &text,const QString& time, const QString& image);
+    void messageReceived(const MessageData &);
     void error(QAbstractSocket::SocketError socketError);
-    void userJoined(const QString &username);
-    void userLeft(const QString &username);
+    void userJoined(const MessageData &username);
+    void userLeft(const MessageData &username);
+
 private:
+    void verifyLogInStatus(const MessageData& msg);
+
     QTcpSocket* m_clientSocket;
     bool m_loggedIn;
 };

@@ -29,8 +29,10 @@ ChatServerEngine::ChatServerEngine()
    : m_clientsList{}
    , m_listenSocket{}
    , m_clientsMutex{}
-   ,m_messageMutex{}
-   ,m_ptrSenderThread{nullptr}
+   , m_messageMutex{}
+   , m_ptrSenderThread{nullptr}
+   , m_messageQueue{}
+   , m_MsgCache{}
 {
 }
 
@@ -99,8 +101,8 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
       std::string response;
       if( !loginSucceed)
       {
-         // check if it is a sign up message
-         // formatter.parseSignInInfo()
+         // TODO:check if it is a sign up message
+     
 
          //Send a message repeat the information
          response = formatter.formatData("failed","server",MsgType::LOGIN_RESPONSE);
@@ -123,14 +125,23 @@ void ChatServerEngine::loginServiceThreadFunc(int socketClientFd, sockaddr_in cl
       std::stringstream oss;
       oss << "conecction from: "<< newClient.address<< ", port: "<< newClient.port<<std::endl;
       printSafe(oss.str());
-      //if loggin succesfull add the user to the users list
-      addNewClient(newClient);
-
-      // send a random image for the user messages based on the connection time
-
+     
       //notify to other clients a new user have joined the chat
       std::string userJoinedMsg = formatter.formatData("user logged in",newClient.name,MsgType::USER_JOINED);
       addMessageToQueue(socketClientFd,userJoinedMsg);
+
+      //if there are clients already we need to notify that users have joined the sesion before this client joined
+      {
+         std::lock_guard<std::mutex> locklist{m_clientsMutex};
+         for( auto& clients: m_clientsList)
+         {
+            std::string clientWasHereMsg = formatter.formatData("user was here",clients.name,MsgType::USER_JOINED);
+            sendMsgTo(newClient.socketFd,clientWasHereMsg);
+         }
+      }
+        
+      //if loggin succesfull add the user to the users list
+      addNewClient(newClient);
       //launch its own reading thread
       std::thread clientReadThread {&ChatServerEngine::readServiceThreadFunc,this,newClient};
       clientReadThread.detach();
@@ -176,7 +187,8 @@ void ChatServerEngine::readServiceThreadFunc(ClientInfo thisClient)
 {
    //handle client
    printSafe("start transaction:",thisClient.socketFd);
-
+   JsonFormatter formatter;
+    
    while(!serverClosed)
    {
      //read if there is data from the client
@@ -187,8 +199,14 @@ void ChatServerEngine::readServiceThreadFunc(ClientInfo thisClient)
       //Add message to the message queue
       addMessageToQueue(thisClient.socketFd,message);
    }
-   
+   // create and format user left message for other clients
+   std::string leaveMessage = formatter.formatData("user left",thisClient.name,MsgType::USER_LEFT);
+   //remove the client from the list
    findAndRemoveClient(thisClient);
+
+   // add user left message to the queue for other clients
+   addMessageToQueue(thisClient.socketFd,leaveMessage);
+
    printSafe("closing client:",thisClient.socketFd);
    //close socket
    thor::Close(thisClient.socketFd);
@@ -199,8 +217,8 @@ void ChatServerEngine::readServiceThreadFunc(ClientInfo thisClient)
 void ChatServerEngine::addMessageToQueue(int clientSocket,const std::string& message)
 {
    {
-      std::lock_guard<std::mutex> lockMessageQueue(m_messageMutex);
-      messageQueue.push_back(std::pair<int,std::string>(clientSocket,message));
+      std::lock_guard<std::mutex> lockm_messageQueue(m_messageMutex);
+      m_messageQueue.push_back(std::pair<int,std::string>(clientSocket,message));
    }
 }
 // Send service just forward the messages in the message queue to all the clients
@@ -213,7 +231,7 @@ void ChatServerEngine::sendServiceThreadFunc()
          std::unique_lock<std::mutex> guard1(m_messageMutex, std::defer_lock);
          std::unique_lock<std::mutex> guard2(m_clientsMutex, std::defer_lock);
          std::lock(guard1, guard2);
-         for( auto& msg : messageQueue)
+         for( auto& msg : m_messageQueue)
          {
             int senderFd = msg.first;
             std::string message = msg.second;
@@ -237,13 +255,9 @@ void ChatServerEngine::sendServiceThreadFunc()
                }
             }
          } 
-         if( m_clientsList.size() > 1 )
-            messageQueue.clear();//need a cache for messages
+         m_messageQueue.clear();//need a cache for messages
       }
    }
-
-   
-
 }
 
 void ChatServerEngine::installSignalHandlers()
@@ -305,7 +319,6 @@ void ChatServerEngine::addNewClient( const ClientInfo& newClient)
     printSafe("num clients: ",numClients);
 
 }
-
 
 void ChatServerEngine::findAndRemoveClient(const ClientInfo& clientToClose)
 {

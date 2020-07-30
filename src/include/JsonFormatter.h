@@ -16,8 +16,8 @@ public:
     virtual void parseLoginInfo( ClientInfo& clientInfo,const std::string& data)override;
 private:
     std::string createJsonImagePacket(const std::string& fileName,const std::string& sender, const std::string& data);
-    std::string createJsonMsgPacket(const std::string& sender, const std::string& message);
     std::string createLogInPacket(const std::string& sender, const std::string& data);
     std::string createNewUserJoinedPacket(const std::string& sender, const std::string& data);
+    std::string createUserLeftPacket(const std::string& sender,const std::string& data);
 };
 #endif

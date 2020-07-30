@@ -11,6 +11,7 @@ QT_END_NAMESPACE
 
 class QStandardItemModel;
 class CustomTextEdit;
+class MessageData;
 class ChatWindow: public QMainWindow
 {
 	Q_OBJECT
@@ -22,26 +23,29 @@ public:
 
 signals:
 	void userVerified();
-
+	void userVerifyError(const QString &);
 public slots:
 	void sendMessage(); 
-	void msgReceived(const QString& sender,const QString &msg,const QString& time,const QString& image);
+	void msgReceived(const MessageData& msg);
     void connectToServer(const QString&, const QString&);
 	void sendLogInData();
-	void addUserToListView(const QString&);
+	void addUserToListView(const MessageData&);
+	void removeUserFromListView(const MessageData& userLeft);
+	void loadProfileImage();
+
 private:
-	QString buildHtmlRecievedMsgTags(const QString &username, const QString &message,const QString& time, const QString &userImage);
-	QString buildLocalHtmlTags(const QString& userName,const QString& message, const QString& time,const QString& userImage);
+	QString buildHtmlRecievedMsgTags(const MessageData &msg);
+	QString buildLocalHtmlTags(const MessageData& msg);
 
 	Ui::ChatWindow* ui;
 	CustomTextEdit* m_customTextEdit;
-    QStandardItemModel *m_chatModel;
+    QStandardItemModel* m_chatModel;
 	ChatClient* m_chatClient;
 	QString m_userName;
   	QString m_password;
+	QString m_image;
 	QVector<QString> m_htmlDocList;
 	QString m_stylesDir;
-
 };
 #endif
 		

@@ -38,7 +38,13 @@ private:
    std::mutex m_clientsMutex;
    std::mutex m_messageMutex;
    std::unique_ptr<std::thread> m_ptrSenderThread;
-   std::vector <std::pair<int,std::string>> messageQueue; 
+   std::vector <std::pair<int,std::string>> m_messageQueue; 
+
+   struct MessageCache
+   {
+       std::mutex m_cacheMutex{};
+       std::vector<std::pair<int,std::string>> m_messageCache{};
+   }m_MsgCache;
 };
 
 #endif //CHAT_SERVER_H

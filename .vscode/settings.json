@@ -59,6 +59,7 @@
         "any": "cpp",
         "unordered_set": "cpp",
         "set": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.o": "cpp"
     }
 }

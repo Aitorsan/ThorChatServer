@@ -14,22 +14,25 @@
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <chrono>
+#include <iomanip>
 
 ChatClient::ChatClient(QObject *parent)
-    : QObject(parent), m_clientSocket(new QTcpSocket(this)), m_loggedIn(false)
+    : QObject(parent)
+    , m_clientSocket(new QTcpSocket(this))
+    , m_loggedIn(false)
 {
     // Forward the connected and disconnected signals
-    connect(m_clientSocket, &QTcpSocket::connected, this, &ChatClient::connected);
-    connect(m_clientSocket, &QTcpSocket::connected, this, &ChatClient::sendLogInData);
-    connect(m_clientSocket, &QTcpSocket::disconnected, this, &ChatClient::disconnected);
-    
+    connect(m_clientSocket, SIGNAL(connected()), this, SIGNAL(connected()));
+    connect(m_clientSocket, SIGNAL(connected()), this, SIGNAL(sendLogInData()));
+    connect(m_clientSocket, SIGNAL(disconnected()), this, SIGNAL(disconnected()));
+
     // connect readyRead() to the slot that will take care of reading the data in
     connect(m_clientSocket, &QTcpSocket::readyRead, this, &ChatClient::onReadyRead);
     // Forward the error signal, QOverload is necessary as error() is overloaded, see the Qt docs
     connect(m_clientSocket, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error), this, &ChatClient::error);
     // Reset the m_loggedIn variable when we disconnect. Since the operation is trivial we use a lambda instead of creating another slot
     connect(m_clientSocket, &QTcpSocket::disconnected, this, [this]() -> void { m_loggedIn = false; });
-    
 }
 
 /*slot called by the GUI*/
@@ -37,8 +40,7 @@ void ChatClient::connectToServer(const QHostAddress &address, quint16 port)
 {
     // connect to the server
     m_clientSocket->connectToHost(address, port);
-
-    //m_clientSocket->waitForConnected(2000);
+    m_clientSocket->waitForConnected(10000);
 }
 
 /*slot called by the GUI*/
@@ -56,13 +58,37 @@ void ChatClient::saveImage(std::string &name, const std::string &imageData)
     std::ofstream(resPath, std::ios::binary) << buffer.rdbuf();
 }
 
-QString ChatClient::formatMessage(const QString &username, const QString &time, const QString &data)
+QString ChatClient::formatMessage(MessageData &msg, const MsgType &msgtype)
 {
+     // compute the time
+    auto time = std::time(nullptr);
+    std::stringstream buff;
+    buff << std::put_time(std::gmtime(&time), "%d/%m/%y %T");
+
+    // search message type
+    QString type{"message"};
+
+    switch (msgtype)
+    {
+        case IMAGE:         type = "image";  break;
+        case MESSAGE:       break;
+        case LOGIN:         type = "login";  break;
+        case SIGN_UP:       type = "signup"; break;
+        case USER_JOINED:   type = "user-joined"; break;
+        case USER_LEFT:     type = "user-left"; break;
+    }
+    
+    msg.m_type = type;// this ensures that we did not type wrong the type
+    msg.m_time = QString::fromStdString(buff.str());
+    
     QJsonObject jsonMessage;
-    jsonMessage.insert("type", QJsonValue::fromVariant("message"));
-    jsonMessage.insert("sender", QJsonValue::fromVariant(username));
-    jsonMessage.insert("data", QJsonValue::fromVariant(data));
-    jsonMessage.insert("time", QJsonValue::fromVariant(time));
+    jsonMessage.insert("type", QJsonValue::fromVariant(msg.m_type));
+    jsonMessage.insert("id", QJsonValue::fromVariant(msg.m_id));
+    jsonMessage.insert("sender", QJsonValue::fromVariant(msg.m_sender));
+    jsonMessage.insert("text", QJsonValue::fromVariant(msg.m_text));
+    jsonMessage.insert("time", QJsonValue::fromVariant(msg.m_time));
+    jsonMessage.insert("image", QJsonValue::fromVariant(msg.m_base64Image));
+    jsonMessage.insert("image-extension", QJsonValue::fromVariant(msg.m_imageExtension));
 
     QJsonDocument doc(jsonMessage);
     qDebug() << doc.toJson();
@@ -70,58 +96,48 @@ QString ChatClient::formatMessage(const QString &username, const QString &time, 
     return doc.toJson();
 }
 
-QString ChatClient::formatLogginMessage(const QString &username, const QString &password, const QString &time)
-{
-    QJsonObject logginObject;
-    logginObject.insert("type", QJsonValue::fromVariant("login"));
-    logginObject.insert("sender", QJsonValue::fromVariant(username));
-    logginObject.insert("password", QJsonValue::fromVariant(password));
-    logginObject.insert("time", QJsonValue::fromVariant(time));
-
-    QJsonDocument doc(logginObject);
-    qDebug() << doc.toJson();
-
-    return doc.toJson();
-}
 void ChatClient::ParseData(const QJsonObject &docObj)
 {
     /*  Json format
-
-      If its a message
       ------------------
-       {
-           "sender":"sender name"
-           "time":"time"
-           "type":"message "
-           "data:":"anything"
-       }
-
-      If its an image
-      ----------------
-        {
-           "sender":"sender name"
-           "type":"image"
-           "time": "time"
-           "filename":"image file name and extension"
-           "data:":"image data"
-        }
+    {	
+        "type": "message,image,user-joined,user-left,login,signup",
+        "sender": "sender name",
+        "time": "time stamp when this message was sent",
+        "image":"base64 embeded image used for profile"
+        "image-extension": ".jpg , .png"
+        "text": "the message"
+   }
   */
 
-    // actions depend on the type of message
+    /* this fields are compulsory if not the message will be ignored 
+       if one of the fields are optional then they should contain 
+       the word "none" to indicate that this value is blank
+    */
     const QJsonValue typeVal = docObj.value(QLatin1String("type"));
-    const QJsonValue sentTimeVal = docObj.value(QLatin1String("time"));
     const QJsonValue senderVal = docObj.value(QLatin1String("sender"));
+    const QJsonValue idVal = docObj.value(QLatin1String("id"));
+    const QJsonValue sentTimeVal = docObj.value(QLatin1String("time"));
+    const QJsonValue imageVal = docObj.value(QLatin1String("image"));
+    const QJsonValue imgExtensionVal = docObj.value(QLatin1String("image-extension"));
+    const QJsonValue textDataVal = docObj.value(QLatin1String("text"));
 
     if (typeVal.isNull() || !typeVal.isString())
-    {
+    { // a message with no type was received so we just ignore it
         qDebug() << "ERROR DATA: type field";
-        return; // a message with no type was received so we just ignore it
+        return;
     }
 
     if (senderVal.isNull() || !senderVal.isString())
-    {
+    { // a message with no sender was recevied
         qDebug() << "ERROR DATA: sender field";
-        return; // a message with no type was received so we just ignore it
+        return;
+    }
+
+    if (idVal.isNull() || !idVal.isString())
+    {
+        qDebug() << "ERROR ID: Id field error";
+        return;
     }
 
     if (sentTimeVal.isNull() || !sentTimeVal.isString())
@@ -130,74 +146,58 @@ void ChatClient::ParseData(const QJsonObject &docObj)
         return;
     }
 
-    QString sentTime = sentTimeVal.toString();
-    QString sender = senderVal.toString();
+    if (textDataVal.isNull() || !textDataVal.isString())
+    {
+        qDebug() << "ERROR DATA: there is no text field";
+        return;
+    }
 
-    if (typeVal.toString().compare(QLatin1String("image"), Qt::CaseInsensitive) == 0)
+    if (imageVal.isNull() || !imageVal.isString())
+    {
+        qDebug() << "ERROR DATA: image data";
+        return;
+    }
+
+    MessageData msg;
+    msg.m_type = typeVal.toString();
+    msg.m_sender = senderVal.toString();
+    msg.m_id = idVal.toString();
+    msg.m_time = sentTimeVal.toString();
+    msg.m_base64Image = imageVal.toString();
+    msg.m_imageExtension = imgExtensionVal.toString();
+    msg.m_text = textDataVal.toString();
+
+    const QString &msgType = msg.m_type;
+
+    if (msgType.compare(QLatin1String("image"), Qt::CaseInsensitive) == 0)
     {
         qDebug() << "Is image";
-        const QJsonValue filename = docObj.value(QLatin1String("filename"));
-        const QJsonValue imageVal = docObj.value(QLatin1String("data"));
-
-        if (imageVal.isNull() || !imageVal.isString())
-        {
-            qDebug() << "ERROR DATA: image data";
-            return;
-        }
-        if (filename.isNull() || !filename.isString())
-        {
-            qDebug() << "ERROR DATA: filname field";
-            return;
-        }
-
-        QByteArray text = QByteArray::fromBase64(imageVal.toVariant().toByteArray());
-
-        std::string imageData = std::move(text.toStdString());
-        std::string fileName = std::move(filename.toString().toStdString());
-        saveImage(fileName, imageData);
+        std::string fileName = "temp_name.jpg";
+        saveImage(fileName, decodeBase64Data(imgExtensionVal.toVariant()).toStdString());
     }
-    else if (typeVal.toString().compare(QLatin1String("message"), Qt::CaseInsensitive) == 0)
-    { //It's a login message
-        qDebug() << "Is message";
-        const QJsonValue dataVal = docObj.value(QLatin1String("data"));
-        if (dataVal.isNull() || !dataVal.isString())
-        {
-            qDebug() << "ERROR DATA";
-            return;
-        }
+    else if (msgType.compare(QLatin1String("message"), Qt::CaseInsensitive) == 0)
+    {
 
-        const QJsonValue imageVal = docObj.value(QLatin1String("image"));
-        if (imageVal.isNull() || !dataVal.isString())
-        {
-            //TODO:for now nothing
-        }
-
-        emit messageReceived(sender, dataVal.toString(), sentTime, "none");
+        emit messageReceived(msg);
     }
-    else if (typeVal.toString().compare(QLatin1String("login"), Qt::CaseInsensitive) == 0)
-    { //It's a login message
-        qDebug() << "Is login";
-        const QJsonValue dataVal = docObj.value(QLatin1String("data"));
-        if (dataVal.isNull() || !dataVal.isString())
-        {
-            qDebug() << "ERROR DATA";
-            return;
-        }
-        verifyLogIn(sender, dataVal.toString());
+    else if (msgType.compare(QLatin1String("login"), Qt::CaseInsensitive) == 0)
+    {
+        //It's a login message
+        verifyLogInStatus(msg);
     }
-    else if (typeVal.toString().compare(QLatin1String("user-joined"), Qt::CaseInsensitive) == 0)
-    {   
+    else if (msgType.compare(QLatin1String("user-joined"), Qt::CaseInsensitive) == 0)
+    {
         //new user joined the chat  message
         qDebug() << "new user joined";
-        
-        const QJsonValue dataVal = docObj.value(QLatin1String("data"));
 
-        if (dataVal.isNull() || !dataVal.isString())
-        {
-            qDebug() << "ERROR DATA";
-            return;
-        }
-        emit userJoined(sender);
+        emit userJoined(msg);
+    }
+    else if (msgType.compare(QLatin1String("user-left"), Qt::CaseInsensitive) == 0)
+    {
+        //new user joined the chat  message
+        qDebug() << "user left joined";
+
+        emit userLeft(msg);
     }
 }
 
@@ -210,13 +210,14 @@ void ChatClient::onReadyRead()
     qDebug() << "\n--------\nonReadyRead\n---------";
 
     // we start a transaction so we can revert to the previous state in case we try to read more data than is available on the socket
+    
+    //TODO: find a way to read this crap
     m_clientSocket->startTransaction();
     textData = m_clientSocket->readAll();
     qDebug() << "size: " << textData.size();
-    m_clientSocket->commitTransaction();
     m_clientSocket->rollbackTransaction();
-    /// we successfully read some data
-    // we now need to make sure it's in fact a valid JSON
+
+    // we successfully read some data now make sure it's in fact a valid JSON
     QJsonParseError parseError;
     //find and remove any extra characters at the end
     auto index = textData.indexOf('}');
@@ -243,15 +244,14 @@ void ChatClient::onReadyRead()
     m_clientSocket->flush();
 }
 
-void ChatClient::verifyLogIn(const QString &sender, const QString &data)
+void ChatClient::verifyLogInStatus(const MessageData &msg)
 {
-    if (sender == "server")
+    if (msg.m_sender == "server")
     {
-        if (data == "succeed")
+        if (msg.m_text == "succeed")
             emit loggedIn();
         else
-        {
-        }
+            emit loginError(msg.m_text);
     }
 }
 
@@ -260,4 +260,14 @@ void ChatClient::sendMessage(const QString &text)
     m_clientSocket->startTransaction();
     m_clientSocket->write(text.toStdString().c_str());
     m_clientSocket->rollbackTransaction();
+}
+
+//Convinient helper to decode data into a QString
+QString ChatClient::decodeBase64Data(const QVariant &data)
+{
+    QByteArray decodedDataArray = QByteArray::fromBase64(data.toByteArray());
+
+    std::string decodedData = std::move(decodedDataArray.toStdString());
+
+    return QString::fromStdString(decodedData);
 }

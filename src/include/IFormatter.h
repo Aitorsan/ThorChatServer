@@ -5,9 +5,12 @@ enum MsgType
 {
    IMAGE,
    MESSAGE,
-   LOGIN_RESPONSE,
-   USER_JOINED
-   
+   LOGIN,
+   SIGN_UP,
+   USER_JOINED,
+   USER_LEFT,
+   LOGIN_RESPONSE,//used only by the server
+   SIGNUP_RESPONSE,// used only by the server
 };
 
 class ClientInfo;
