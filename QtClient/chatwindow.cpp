@@ -2,6 +2,7 @@
 #include "chatwindow.h"
 #include "CustomTextEdit.h"
 #include "messageData.h"
+#include "../src/include/base64.h"
 #include <QString>
 #include <QHostAddress>
 #include <QStandardItemModel>
@@ -83,10 +84,13 @@ void ChatWindow::loadProfileImage()
     
     imageName += std::to_string(randomImage);
     imageName +=".png";
+    qDebug() << QString::fromStdString(imageName);
     QString file = QDir::currentPath()+ "/res/icons/"+QString::fromStdString(imageName);
    os << std::ifstream(file.toStdString(), std::ios::binary).rdbuf();
    //Encode the image in base64 and asssign the image to the user image
-   m_image = QString::fromStdString(os.str()).toUtf8().toBase64();
+
+   std::string imdata = base64(os.str());
+   m_image = QString::fromStdString(imdata);
 
    qDebug() << "READ IMAGE:" << m_image;
 
@@ -175,7 +179,7 @@ QString ChatWindow::buildHtmlRecievedMsgTags(const MessageData &msg)
 
   QString htmlDocument;
   for(auto text : m_htmlDocList)
-    htmlDocument+= text;
+    htmlDocument += text;
 
   return htmlDocument;
 }
@@ -192,7 +196,7 @@ QString ChatWindow::buildLocalHtmlTags(const MessageData& localMsg)
   imageTag += ";";
   imageTag += "base64,";
   imageTag += localMsg.m_base64Image;
-  imageTag += "\" class=\"right\">";
+  imageTag += "\" class=\"left\">";
 
   qDebug() << imageTag;
   m_htmlDocList.push_back(imageTag);
@@ -234,7 +238,7 @@ void ChatWindow::sendMessage()
   msg.m_sender = m_userName;
   msg.m_text = message;
   msg.m_base64Image = m_image;
-    
+  msg.m_imageExtension ="png";
   QString formattedMsg = m_chatClient->formatMessage(msg,MsgType::MESSAGE);
 
   //build localHtml
